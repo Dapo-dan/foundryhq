@@ -1,0 +1,215 @@
+# FoundryHQ
+
+> The complete operating system for modern startups.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://go.dev/)
+[![React](https://img.shields.io/badge/React-18+-61DAFB?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![React Native](https://img.shields.io/badge/React_Native-0.74+-61DAFB?logo=react)](https://reactnative.dev/)
+[![CI](https://github.com/foundryhq/foundryhq/actions/workflows/ci.yml/badge.svg)](https://github.com/foundryhq/foundryhq/actions)
+
+---
+
+## Vision
+
+Most startups cobble together 10+ disconnected tools — a CRM here, a task tracker there, a notes app somewhere else. Context gets lost, time is wasted, and teams lose alignment as they scale.
+
+**FoundryHQ** is the unified operating system built specifically for startups. One platform where your team tracks customers, ships product, runs meetings, and measures what matters — from day zero to Series B.
+
+---
+
+## Target Users
+
+| Persona | Pain Point | How FoundryHQ Helps |
+|---|---|---|
+| **Founding teams (2–10 people)** | Too many tools, not enough time | Single workspace replaces Notion + Linear + HubSpot |
+| **Startup operators / COOs** | No single view of company health | Real-time KPI dashboard tied to actual work |
+| **Early sales teams** | CRM overkill (Salesforce) or underbuilt (spreadsheets) | Lightweight CRM designed for founder-led sales |
+| **Product-focused engineers** | Context switching between PM tools and code | Sprint tracking that connects to real team goals |
+| **Investors / advisors** | No transparent view into portfolio company ops | Shareable KPI and goal progress reports |
+
+---
+
+## Features
+
+### CRM
+- Contact and company management
+- Deal pipeline with Kanban view
+- Activity timeline (calls, emails, notes)
+- Integration-ready (email sync, calendar)
+
+### Task Management
+- Kanban and list views
+- Sprint planning and backlog
+- Sub-tasks, labels, priorities, due dates
+- Assignees and watchers
+
+### Meeting Notes
+- Structured note templates
+- Automatic action item extraction
+- Link meetings to projects and contacts
+- Searchable archive
+
+### Goal Tracking (OKRs)
+- Company, team, and personal OKRs
+- Key result check-ins
+- Progress visualization
+- Alignment tree view
+
+### Team Management
+- Role-based access control (Owner, Admin, Member, Viewer)
+- Invite via email or link
+- Team activity feed
+- Onboarding checklists
+
+### KPI Dashboard
+- Configurable metric widgets
+- Goal vs. actual tracking
+- Time-series charts
+- Export to PDF / CSV
+
+### Notifications
+- In-app, push (mobile), and email
+- Digest preferences
+- @mention support
+
+---
+
+## Architecture
+
+```
+foundryhq/                          # Monorepo root
+├── apps/
+│   ├── api/                        # Go + Gin REST API
+│   │   ├── cmd/server/             # Entrypoint
+│   │   ├── internal/
+│   │   │   ├── domain/             # Core entities & interfaces
+│   │   │   ├── usecases/           # Business logic
+│   │   │   ├── repositories/       # Data access layer
+│   │   │   └── handlers/           # HTTP handlers
+│   │   └── pkg/                    # Reusable packages
+│   ├── web/                        # React + TypeScript SPA
+│   └── mobile/                     # React Native (iOS + Android)
+├── packages/
+│   └── shared-types/               # Shared TS types across web & mobile
+├── docs/                           # Architecture, API, guides
+├── docker-compose.yml
+└── .github/workflows/              # CI/CD pipelines
+```
+
+### Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 18, TypeScript 5, Vite, Tailwind CSS, shadcn/ui, Zustand, React Query |
+| **Mobile** | React Native 0.74, Expo, React Navigation |
+| **Backend** | Go 1.22, Gin, GORM |
+| **Database** | PostgreSQL 16 |
+| **Auth** | JWT (access + refresh tokens), OAuth 2.0 (Google, GitHub) |
+| **API Docs** | Swagger / OpenAPI 3.0 |
+| **Infrastructure** | Docker, Docker Compose |
+| **CI/CD** | GitHub Actions |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- [Go 1.22+](https://go.dev/dl/)
+- [Node.js 20+](https://nodejs.org/)
+- [Docker & Docker Compose](https://docs.docker.com/get-docker/)
+- [pnpm 9+](https://pnpm.io/installation)
+
+### Quick Start (Docker)
+
+```bash
+git clone https://github.com/foundryhq/foundryhq.git
+cd foundryhq
+
+# Copy environment files
+cp apps/api/.env.example apps/api/.env
+
+# Start everything
+docker compose up --build
+```
+
+- Web app: http://localhost:5173
+- API: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger/index.html
+- pgAdmin: http://localhost:5050
+
+### Local Development
+
+**Backend (Go)**
+```bash
+cd apps/api
+go mod download
+go run cmd/server/main.go
+```
+
+**Frontend (React)**
+```bash
+cd apps/web
+pnpm install
+pnpm dev
+```
+
+**Mobile (React Native)**
+```bash
+cd apps/mobile
+pnpm install
+npx expo start
+```
+
+---
+
+## API Documentation
+
+The REST API is documented with Swagger/OpenAPI 3.0.
+
+- **Dev:** http://localhost:8080/swagger/index.html
+- **Spec file:** `docs/api/openapi.yaml`
+
+Generate/update Swagger docs:
+```bash
+cd apps/api
+swag init -g cmd/server/main.go -o docs/swagger
+```
+
+---
+
+## Project Structure (Detailed)
+
+See [`docs/architecture/overview.md`](docs/architecture/overview.md) for deep-dive architecture decisions.
+
+---
+
+## Contributing
+
+We welcome contributions from the community! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting a pull request.
+
+Key contribution areas:
+- Bug fixes and feature requests via [GitHub Issues](https://github.com/foundryhq/foundryhq/issues)
+- Frontend components and pages
+- Backend API endpoints and business logic
+- Documentation improvements
+- Test coverage
+
+---
+
+## Roadmap
+
+- [ ] Email integration (IMAP/SMTP sync)
+- [ ] Calendar integration (Google Calendar, Outlook)
+- [ ] AI meeting summaries
+- [ ] Zapier / Make webhooks
+- [ ] Public API for integrations
+- [ ] White-label / self-hosted enterprise edition
+
+---
+
+## License
+
+MIT © [FoundryHQ](https://github.com/foundryhq/foundryhq)
