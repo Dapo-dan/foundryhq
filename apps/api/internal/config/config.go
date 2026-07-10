@@ -3,7 +3,9 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
 	"time"
 
@@ -54,9 +56,14 @@ func Load() (*Config, error) {
 	v.SetDefault("JWT_REFRESH_EXPIRY", "168h")
 
 	if err := v.ReadInConfig(); err != nil {
-		// A missing .env file is expected outside local dev, so only other
-		// read errors (e.g. malformed file) should fail startup.
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		// A missing .env file is expected outside local dev (e.g. in
+		// containers, where config comes from real env vars), so only other
+		// read errors (e.g. malformed file) should fail startup. Since
+		// SetConfigFile points at an explicit path rather than a searched
+		// one, a missing file surfaces as a plain *fs.PathError here, not
+		// viper.ConfigFileNotFoundError (that type is only returned by
+		// viper's own search-path resolution).
+		if !errors.Is(err, fs.ErrNotExist) {
 			return nil, fmt.Errorf("reading .env: %w", err)
 		}
 	}

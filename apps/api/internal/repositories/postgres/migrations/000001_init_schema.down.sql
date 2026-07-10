@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS workspace_members;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS workspaces;

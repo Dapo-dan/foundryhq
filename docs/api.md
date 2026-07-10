@@ -23,6 +23,13 @@ Human-curated overview of FoundryHQ's REST API. This is the index — the genera
 
 ## Endpoint Index
 
+### Operational
+| Method | Path | Description |
+|---|---|---|
+| GET | `/health` | Liveness check — process is up, no dependency checks |
+| GET | `/ready` | Readiness check — additionally verifies the database is reachable |
+| GET | `/version` | Running build's version and commit |
+
 ### Auth
 | Method | Path | Description |
 |---|---|---|

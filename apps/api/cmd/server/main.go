@@ -1,7 +1,15 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -12,6 +20,10 @@ import (
 	"github.com/foundryhq/foundryhq/apps/api/pkg/logger"
 )
 
+// shutdownTimeout bounds how long graceful shutdown waits for in-flight
+// requests to finish before forcing the listener closed.
+const shutdownTimeout = 10 * time.Second
+
 func main() {
 	// Config must load before the structured logger exists, so failures here
 	// use the standard log package rather than zap.
@@ -19,6 +31,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("loading config: %v", err)
 	}
+	fmt.Println("✓ Configuration loaded")
 
 	zapLogger, err := logger.New(cfg.Env)
 	if err != nil {
@@ -39,6 +52,7 @@ func main() {
 	if err != nil {
 		zapLogger.Fatal("connecting to database", zap.Error(err))
 	}
+	fmt.Println("✓ PostgreSQL connected")
 
 	// ReleaseMode silences gin's debug-level request logging/warnings, which
 	// are noisy and unnecessary once structured logging is in place.
@@ -52,12 +66,44 @@ func main() {
 	router.Use(gin.Recovery())
 
 	healthHandler := handlers.NewHealthHandler(db)
-	router.GET("/health", healthHandler.Check)
+	router.GET("/health", healthHandler.Health)
+	router.GET("/ready", healthHandler.Ready)
+	router.GET("/version", healthHandler.Version)
 
-	zapLogger.Info("starting server", zap.String("port", cfg.Port), zap.String("env", cfg.Env))
-	// Run blocks, serving until the process is killed or a listener error
-	// occurs; the leading ":" binds to all network interfaces.
-	if err := router.Run(":" + cfg.Port); err != nil {
-		zapLogger.Fatal("server failed", zap.Error(err))
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: router,
 	}
+
+	// ListenAndServe blocks, so it runs in its own goroutine; the main
+	// goroutine instead waits below for an OS signal to begin shutdown.
+	go func() {
+		fmt.Printf("✓ Server running on :%s\n", cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			zapLogger.Fatal("server failed", zap.Error(err))
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	zapLogger.Info("shutting down server")
+
+	// Bounding shutdown with a timeout stops it from hanging forever on a
+	// stuck connection; requests still in flight get this long to finish.
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		zapLogger.Error("server forced to shut down", zap.Error(err))
+	}
+
+	if sqlDB, err := db.DB(); err != nil {
+		zapLogger.Error("unwrapping database handle", zap.Error(err))
+	} else if err := sqlDB.Close(); err != nil {
+		zapLogger.Error("closing database connection", zap.Error(err))
+	}
+
+	zapLogger.Info("server exited")
 }
