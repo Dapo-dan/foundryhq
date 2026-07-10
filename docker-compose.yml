@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: foundryhq
+      POSTGRES_PASSWORD: foundryhq
+      POSTGRES_DB: foundryhq
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foundryhq"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: dev@foundryhq.local
+      PGADMIN_DEFAULT_PASSWORD: foundryhq
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+  # api and web are not yet scaffolded (see docs/mvp.md) — add their services
+  # here once apps/api has a Dockerfile and apps/web has a build.
+
+volumes:
+  postgres_data:

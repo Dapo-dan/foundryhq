@@ -4,29 +4,31 @@
 
 ## Shipped
 
-The current GA feature set — see `../README.md#features` for the user-facing description of each:
+Nothing yet — `apps/` and `packages/` are empty scaffolding, no application code has been written. The feature descriptions in `../README.md#features` and `../PROJECT.md` describe the target state, not current state.
 
-- Authentication (email/password, OAuth via Google/GitHub, JWT + refresh tokens, role-based access)
-- CRM (contacts, companies, deal pipeline, activity timeline)
-- Task Management (Kanban/list views, sprints, sub-tasks, labels, priorities)
-- Meeting Notes (structured notes, action item extraction, linking to contacts/projects)
-- Goal Tracking / OKRs (company/team/personal objectives, key result check-ins, alignment tree)
-- Team Management (invites, roles, activity feed)
-- KPI Dashboard (custom KPIs, time-series values, goal alignment)
-- Notifications (in-app, push, email, @mentions)
+## Now (Version 1 — this month)
 
-## Now (current sprint)
+The MVP scope — see `mvp.md` for the full checklist and definition of done:
 
-- Hardening the CRM activity timeline for performance at higher deal volume (Early Sales Rep pain point: losing context on cold deals)
-- Investor/Advisor read-only snapshot sharing — shareable link, no full workspace login required
+- Authentication (email/password, JWT + refresh tokens) — REQ-01
+- Workspace & Team (create workspace, invite members, switch workspace, Owner/Member roles) — REQ-02 (partial)
+- Task Management (Kanban board, CRUD tasks, assign users, status updates) — REQ-11
 
-## Next (1–2 sprints out)
+## Next (v1.1 — after MVP ships)
 
+- **CRM** (contacts, companies, deal pipeline, activity timeline) — REQ-03, REQ-04
+- **OAuth** (Google, GitHub) and full role set (Admin, Viewer) — completes REQ-01, REQ-02
+- **Task Management (advanced)** — sprints, velocity tracking, sub-tasks, labels, priorities — REQ-05
+- **Meeting Notes** (structured notes, action item extraction, linking to contacts/projects) — REQ-06
+
+## Later (v1.2+)
+
+- **Goal Tracking / OKRs** (company/team/personal objectives, key result check-ins, alignment tree) — REQ-07
+- **KPI Dashboard** (custom KPIs, time-series values, goal alignment) — REQ-08
+- **Investor/Advisor read-only snapshot sharing** — REQ-09
+- **Notifications** (in-app, push, email, @mentions) — REQ-10
 - **Email integration (IMAP/SMTP sync)** — logs emails to the CRM activity timeline automatically; highest-leverage fix for the Early Sales Rep persona's "reduce clicks to log an activity" need
 - **Calendar integration (Google Calendar, Outlook)** — auto-creates meeting records from calendar events, reducing meeting-notes setup friction
-
-## Later (3+ sprints)
-
 - **AI meeting summaries** — auto-drafted summaries and suggested action items from meeting notes
 - **Zapier / Make webhooks** — lightweight integration surface for teams with tools outside FoundryHQ's core set
 - **Public API for integrations** — a scoped, documented external API (distinct from the internal API in `api.md`), gated on real demand from teams already embedded in the product

@@ -11,6 +11,12 @@
 
 ---
 
+## Status
+
+This repo is in the planning/scaffolding stage — `apps/` and `packages/` contain directory structure only, no application code yet. The **Features** section below describes the target product; see [`docs/mvp.md`](docs/mvp.md) for what's actually being built first (Auth, Workspace/Team, Tasks) and [`docs/roadmap.md`](docs/roadmap.md) for sequencing after that.
+
+---
+
 ## Vision
 
 Most startups cobble together 10+ disconnected tools — a CRM here, a task tracker there, a notes app somewhere else. Context gets lost, time is wasted, and teams lose alignment as they scale.
@@ -129,6 +135,8 @@ foundryhq/                          # Monorepo root
 
 ### Quick Start (Docker)
 
+`apps/api` and `apps/web` have no code yet (see **Status** above), so `docker-compose.yml` currently only brings up the database infra. The API and web services will be added to it once they're scaffolded.
+
 ```bash
 git clone https://github.com/foundryhq/foundryhq.git
 cd foundryhq
@@ -136,37 +144,22 @@ cd foundryhq
 # Copy environment files
 cp apps/api/.env.example apps/api/.env
 
-# Start everything
-docker compose up --build
+# Start the database
+docker compose up
 ```
+
+- Postgres: localhost:5432
+- pgAdmin: http://localhost:5050
+
+Once `apps/api` and `apps/web` are scaffolded (see `docs/mvp.md`), this section will be updated with the commands to run them — targeting:
 
 - Web app: http://localhost:5173
 - API: http://localhost:8080
 - Swagger UI: http://localhost:8080/swagger/index.html
-- pgAdmin: http://localhost:5050
 
 ### Local Development
 
-**Backend (Go)**
-```bash
-cd apps/api
-go mod download
-go run cmd/server/main.go
-```
-
-**Frontend (React)**
-```bash
-cd apps/web
-pnpm install
-pnpm dev
-```
-
-**Mobile (React Native)**
-```bash
-cd apps/mobile
-pnpm install
-npx expo start
-```
+Not yet available — `apps/api`, `apps/web`, and `apps/mobile` have no code to run. This section will be filled in as each app is scaffolded per `docs/mvp.md`.
 
 ---
 
@@ -206,12 +199,7 @@ Key contribution areas:
 
 ## Roadmap
 
-- [ ] Email integration (IMAP/SMTP sync)
-- [ ] Calendar integration (Google Calendar, Outlook)
-- [ ] AI meeting summaries
-- [ ] Zapier / Make webhooks
-- [ ] Public API for integrations
-- [ ] White-label / self-hosted enterprise edition
+See [`docs/mvp.md`](docs/mvp.md) for what's shipping in Version 1 (Auth, Workspace/Team, Tasks) and [`docs/roadmap.md`](docs/roadmap.md) for the full sequencing after that — CRM, Meeting Notes, OKRs, KPI Dashboard, Notifications, then integrations (email/calendar sync, AI meeting summaries, Zapier/Make webhooks, a public API). White-label/self-hosted and SSO/SAML are explicitly iceboxed until a real customer asks.
 
 ---
 

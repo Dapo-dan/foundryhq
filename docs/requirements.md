@@ -1,6 +1,6 @@
 # Requirements
 
-Current, high-level requirements for FoundryHQ's GA feature set, prioritized with MoSCoW. This is the traceability anchor between `vision.md`/`roadmap.md` (why) and individual tickets/PRs (what got built). For the elicitation process and template behind these entries, see `../.ai/business-analysis/requirements.md`.
+High-level requirements for FoundryHQ's target feature set, prioritized with MoSCoW. This is the traceability anchor between `vision.md`/`roadmap.md` (why) and individual tickets/PRs (what got built) — see `mvp.md` for what's actually in scope for Version 1. For the elicitation process and template behind these entries, see `../.ai/business-analysis/requirements.md`.
 
 ## REQ-01: Workspace-scoped authentication
 
@@ -102,6 +102,16 @@ The system shall deliver notifications in-app, via push (mobile), and via email,
 
 **Rationale:** Supports asynchronous, distributed founding teams who aren't always in the app at the same time.
 
+## REQ-11: Basic task management with Kanban board
+
+**Type:** Functional
+**Priority:** Must
+**Persona:** Product Engineer, All
+
+The system shall let a user create, edit, delete, and assign tasks within a workspace project, and display tasks grouped by status (e.g. To Do, In Progress, Done) in a Kanban view.
+
+**Rationale:** Baseline task tracking is the third leg of the Version 1 usable loop (auth + workspace + shared work) — see `mvp.md`. Sprint planning and velocity (REQ-05) build on this once it exists.
+
 ## Non-Functional Requirements
 
 | ID | Requirement | Priority |
@@ -112,19 +122,46 @@ The system shall deliver notifications in-app, via push (mobile), and via email,
 | REQ-NFR-04 | Mutations apply optimistically in the UI and roll back cleanly on server error | Should |
 | REQ-NFR-05 | Mobile parity for CRM, Tasks, and Notifications; OKR/KPI dashboards may remain web-only in the interim | Could |
 
+## Business Rules
+
+- Every user belongs to at least one workspace; there is no user account without workspace context.
+- Every workspace has exactly one Owner at any given time; ownership can be transferred but never left unassigned.
+- Only an Owner can delete a workspace.
+- Only an Owner or Admin can change another member's role or remove them from a workspace.
+- A task belongs to exactly one project within exactly one workspace — it cannot be shared across workspaces.
+- A user can only see and act on data scoped to workspaces they are a member of.
+- Access tokens and refresh tokens are always issued per-user, per-workspace-session — a token minted for one workspace is not valid for another the user belongs to.
+- Deleting a workspace cascades to all its projects, tasks, and other workspace-scoped data (see `database.md` for the FK/cascade rules this implies).
+
+## Assumptions
+
+- Users have a valid, reachable email address for verification, invites, and password reset.
+- A workspace's team size stays small (founding teams, roughly 2–10 people per `vision.md`) — the data model and UI are not optimized for hundreds of members per workspace in v1.
+- Users primarily access FoundryHQ over a stable internet connection; offline-first behavior is not assumed for v1.
+- PostgreSQL is available and reachable by the API in every environment (local, CI, staging, production) — no fallback datastore is planned.
+
+## Constraints
+
+- Version 1 ships web-only; mobile (React Native/Expo) is out of scope until the modules it depends on exist — see `mvp.md`.
+- The backend must follow Clean Architecture (`handlers → usecases → domain ← repositories`) — see `architecture.md` and `adr/0002-clean-architecture-backend.md`. Requirements cannot be implemented by bypassing this boundary (e.g. business logic in a handler).
+- All persisted data goes through GORM against PostgreSQL 16 — no raw SQL except where documented per `architecture.md`'s rules.
+- Auth token lifetimes are fixed by REQ-NFR-03 (15-minute access, 7-day refresh) and are not configurable per workspace.
+- One month is the delivery window for Version 1 (see `mvp.md`) — any requirement not in that scope is explicitly deferred, not silently dropped.
+
 ## Traceability
 
 | REQ-ID | Feature area | Persona | Status |
 |---|---|---|---|
-| REQ-01 | Authentication | All | Shipped |
-| REQ-02 | Authentication / Team Management | All | Shipped |
-| REQ-03 | CRM | Early Sales Rep | Shipped |
-| REQ-04 | CRM | Early Sales Rep | Shipped |
-| REQ-05 | Task Management | Product Engineer | Shipped |
-| REQ-06 | Meeting Notes | Founder-Operator, Product Engineer | Shipped |
-| REQ-07 | Goal Tracking (OKRs) | Founder-Operator, Product Engineer | Shipped |
-| REQ-08 | KPI Dashboard | Founder-Operator, Investor/Advisor | Shipped |
-| REQ-09 | KPI Dashboard | Investor/Advisor | In progress — see `roadmap.md` "Now" |
-| REQ-10 | Notifications | All | Shipped |
+| REQ-01 | Authentication | All | Planned — v1 (see `mvp.md`); OAuth deferred to v1.1+ |
+| REQ-02 | Authentication / Team Management | All | Planned — v1 (Owner/Member only); Admin/Viewer roles deferred to v1.1+ |
+| REQ-03 | CRM | Early Sales Rep | Planned — v1.1+ |
+| REQ-04 | CRM | Early Sales Rep | Planned — v1.1+ |
+| REQ-05 | Task Management | Product Engineer | Planned — v1.1+ (depends on REQ-11) |
+| REQ-06 | Meeting Notes | Founder-Operator, Product Engineer | Planned — v1.1+ |
+| REQ-07 | Goal Tracking (OKRs) | Founder-Operator, Product Engineer | Planned — v1.1+ |
+| REQ-08 | KPI Dashboard | Founder-Operator, Investor/Advisor | Planned — v1.1+ |
+| REQ-09 | KPI Dashboard | Investor/Advisor | Planned — v1.1+ |
+| REQ-10 | Notifications | All | Planned — v1.1+ |
+| REQ-11 | Task Management | Product Engineer, All | Planned — v1 (see `mvp.md`) |
 
-New requirements should be added here with a fresh REQ-ID before a PRD or ticket is written — see the elicitation workflow in `../.ai/business-analysis/requirements.md` and the PRD template in `../.ai/product/prd.md`.
+No code has been written yet — see `roadmap.md` for the corrected current status. New requirements should be added here with a fresh REQ-ID before a PRD or ticket is written — see the elicitation workflow in `../.ai/business-analysis/requirements.md` and the PRD template in `../.ai/product/prd.md`.
