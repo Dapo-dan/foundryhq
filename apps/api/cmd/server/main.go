@@ -16,6 +16,7 @@ import (
 
 	"github.com/foundryhq/foundryhq/apps/api/internal/config"
 	"github.com/foundryhq/foundryhq/apps/api/internal/handlers"
+	"github.com/foundryhq/foundryhq/apps/api/internal/middleware"
 	"github.com/foundryhq/foundryhq/apps/api/pkg/database"
 	"github.com/foundryhq/foundryhq/apps/api/pkg/logger"
 )
@@ -59,11 +60,17 @@ func main() {
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	// gin.New (not gin.Default) skips gin's own logger middleware since zap
-	// already covers logging; Recovery is added back explicitly so a panic
-	// in one handler returns a 500 instead of crashing the whole server.
+	// gin.New (not gin.Default) skips gin's own logger/recovery middleware —
+	// both are replaced below with zap-backed equivalents. Recovery goes
+	// first so it wraps (and can catch panics from) every middleware after
+	// it; RequestID goes before Logger so request IDs are available to log.
 	router := gin.New()
-	router.Use(gin.Recovery())
+	router.Use(
+		middleware.Recovery(zapLogger),
+		middleware.RequestID(),
+		middleware.Logger(zapLogger),
+		middleware.CORS(cfg.CORSAllowedOrigins),
+	)
 
 	healthHandler := handlers.NewHealthHandler(db)
 	router.GET("/health", healthHandler.Health)

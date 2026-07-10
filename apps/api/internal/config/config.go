@@ -30,6 +30,13 @@ type Config struct {
 	JWTRefreshSecret string
 	JWTAccessExpiry  time.Duration
 	JWTRefreshExpiry time.Duration
+
+	// CORSAllowedOrigins lists the exact origins allowed to make
+	// cross-origin requests (e.g. the web app's dev/prod URLs). Credentialed
+	// CORS (needed for the httpOnly refresh-token cookie, see
+	// adr/0004-jwt-access-refresh-tokens.md) can't use a "*" wildcard, so
+	// this must be an explicit list rather than "allow everything".
+	CORSAllowedOrigins []string
 }
 
 // Load reads configuration from a local .env file, falling back to real
@@ -54,6 +61,7 @@ func Load() (*Config, error) {
 	v.SetDefault("DB_SSLMODE", "disable")
 	v.SetDefault("JWT_ACCESS_EXPIRY", "15m")
 	v.SetDefault("JWT_REFRESH_EXPIRY", "168h")
+	v.SetDefault("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 
 	if err := v.ReadInConfig(); err != nil {
 		// A missing .env file is expected outside local dev (e.g. in
@@ -80,6 +88,13 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("parsing JWT_REFRESH_EXPIRY: %w", err)
 	}
 
+	var corsAllowedOrigins []string
+	for _, origin := range strings.Split(v.GetString("CORS_ALLOWED_ORIGINS"), ",") {
+		if origin = strings.TrimSpace(origin); origin != "" {
+			corsAllowedOrigins = append(corsAllowedOrigins, origin)
+		}
+	}
+
 	return &Config{
 		Env:  v.GetString("ENV"),
 		Port: v.GetString("PORT"),
@@ -95,5 +110,7 @@ func Load() (*Config, error) {
 		JWTRefreshSecret: v.GetString("JWT_REFRESH_SECRET"),
 		JWTAccessExpiry:  accessExpiry,
 		JWTRefreshExpiry: refreshExpiry,
+
+		CORSAllowedOrigins: corsAllowedOrigins,
 	}, nil
 }
