@@ -33,3 +33,7 @@ npm-debug.log*
 
 # AI workflows
 .ai/
+
+coverage.out
+bin/
+tmp/
