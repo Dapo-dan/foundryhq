@@ -23,15 +23,20 @@ Most startups cobble together 10+ disconnected tools — a CRM here, a task trac
 
 | Persona | Pain Point | How FoundryHQ Helps |
 |---|---|---|
-| **Founding teams (2–10 people)** | Too many tools, not enough time | Single workspace replaces Notion + Linear + HubSpot |
-| **Startup operators / COOs** | No single view of company health | Real-time KPI dashboard tied to actual work |
-| **Early sales teams** | CRM overkill (Salesforce) or underbuilt (spreadsheets) | Lightweight CRM designed for founder-led sales |
-| **Product-focused engineers** | Context switching between PM tools and code | Sprint tracking that connects to real team goals |
-| **Investors / advisors** | No transparent view into portfolio company ops | Shareable KPI and goal progress reports |
+| **Founder-Operator** | Context scattered across five+ tools; no single view of company health | One workspace for CRM, tasks, goals, and KPIs — replaces Notion + Linear + HubSpot |
+| **Product Engineer** | Sprint context lives in Slack/Linear, disconnected from real goals | Sprint tracking tied to actual OKRs, keyboard-first workflow |
+| **Early Sales Rep** | CRM overkill (Salesforce) or underbuilt (spreadsheets) | Lightweight deal pipeline designed for founder-led sales |
+| **Investor/Advisor** | No transparent, read-only view into portfolio company ops | Shareable KPI/OKR snapshot — no full workspace login required |
 
 ---
 
 ## Features
+
+### Authentication
+- Email + password registration and login
+- OAuth 2.0 (Google, GitHub)
+- JWT access and refresh tokens
+- Role-based access: Owner, Admin, Member, Viewer
 
 ### CRM
 - Contact and company management
@@ -58,7 +63,7 @@ Most startups cobble together 10+ disconnected tools — a CRM here, a task trac
 - Alignment tree view
 
 ### Team Management
-- Role-based access control (Owner, Admin, Member, Viewer)
+- Role management per workspace (see Authentication)
 - Invite via email or link
 - Team activity feed
 - Onboarding checklists
@@ -93,7 +98,7 @@ foundryhq/                          # Monorepo root
 │   └── mobile/                     # React Native (iOS + Android)
 ├── packages/
 │   └── shared-types/               # Shared TS types across web & mobile
-├── docs/                           # Architecture, API, guides
+├── docs/                           # Vision, requirements, architecture, roadmap, API, database, ADRs
 ├── docker-compose.yml
 └── .github/workflows/              # CI/CD pipelines
 ```
@@ -167,10 +172,10 @@ npx expo start
 
 ## API Documentation
 
-The REST API is documented with Swagger/OpenAPI 3.0.
+The REST API is documented with Swagger/OpenAPI 3.0. See [`docs/api.md`](docs/api.md) for the curated endpoint reference.
 
 - **Dev:** http://localhost:8080/swagger/index.html
-- **Spec file:** `docs/api/openapi.yaml`
+- **Generated spec:** `docs/swagger/swagger.yaml`
 
 Generate/update Swagger docs:
 ```bash
@@ -182,7 +187,7 @@ swag init -g cmd/server/main.go -o docs/swagger
 
 ## Project Structure (Detailed)
 
-See [`docs/architecture/overview.md`](docs/architecture/overview.md) for deep-dive architecture decisions.
+See [`docs/architecture.md`](docs/architecture.md) for the full architecture reference and [`docs/adr/`](docs/adr/) for the decisions behind it. Related docs: [`docs/vision.md`](docs/vision.md), [`docs/requirements.md`](docs/requirements.md), [`docs/roadmap.md`](docs/roadmap.md), [`docs/database.md`](docs/database.md).
 
 ---
 

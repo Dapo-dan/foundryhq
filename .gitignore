@@ -30,3 +30,6 @@ npm-debug.log*
 .idea/
 *.swp
 *.swo
+
+# AI workflows
+.ai/

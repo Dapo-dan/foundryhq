@@ -114,10 +114,14 @@ foundryhq/
 │           └── hooks/
 ├── packages/
 │   └── shared-types/               # TypeScript types shared by web & mobile
-├── docs/
-│   ├── api/                        # OpenAPI / Swagger spec
-│   ├── architecture/               # Architecture decision records (ADRs)
-│   └── guides/                     # Developer guides
+├── docs/                            # FoundryHQ-specific documentation
+│   ├── vision.md
+│   ├── requirements.md
+│   ├── architecture.md
+│   ├── roadmap.md
+│   ├── api.md
+│   ├── database.md
+│   └── adr/                        # Architecture Decision Records
 └── .github/
     └── workflows/                  # CI/CD pipelines (lint, test, build, deploy)
 ```
