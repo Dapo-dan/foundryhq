@@ -6,6 +6,7 @@ import { ProjectsPage } from '@/pages/projects'
 import { TasksPage } from '@/pages/tasks'
 import { SettingsPage } from '@/pages/settings'
 import { AuthPage } from '@/pages/auth'
+import { OnboardingPage } from '@/pages/onboarding'
 import { NotFoundPage } from '@/pages/not-found'
 
 export const router = createBrowserRouter([
@@ -21,7 +22,10 @@ export const router = createBrowserRouter([
   },
   {
     element: <AuthLayout />,
-    children: [{ path: 'auth', element: <AuthPage /> }],
+    children: [
+      { path: 'auth', element: <AuthPage /> },
+      { path: 'onboarding', element: <OnboardingPage /> },
+    ],
   },
   {
     path: '*',
