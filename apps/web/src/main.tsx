@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'
+import { App } from './App.tsx'
 
 // This is the entry point of the whole app — the one file every React app
 // needs. It finds the empty <div id="root"> in index.html and tells React
