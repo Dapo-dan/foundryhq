@@ -2,12 +2,26 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/dm-sans";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
+    --font-dm-sans: 'DM Sans Variable', sans-serif;
+    --color-brand: var(--brand);
+    --color-brand-accent: var(--brand-accent);
+    --color-brand-navy: var(--brand-navy);
+    --color-lp-accent: var(--lp-accent);
+    --color-lp-dark: var(--lp-dark);
+    --color-lp-muted: var(--lp-muted);
+    --color-surface-2: var(--surface-2);
+    --color-surface-bg: var(--surface-bg);
+    --color-text-primary: var(--text-primary);
+    --color-text-secondary: var(--text-secondary);
+    --color-text-muted: var(--text-muted);
+    --color-text-subtle: var(--text-subtle);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -81,6 +95,19 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    --brand: #4A9FD8;
+    --brand-accent: #2563EB;
+    --brand-navy: #1E3A5F;
+    --lp-accent: #4A9FD8;
+    --lp-dark: #0A0A0A;
+    --lp-muted: #888888;
+    --surface-2: #FAFAFA;
+    --surface-bg: #F8F9FA;
+    --text-primary: #0A0A0A;
+    --text-secondary: #555555;
+    --text-muted: #888888;
+    --text-subtle: #AAAAAA;
 }
 
 .dark {
