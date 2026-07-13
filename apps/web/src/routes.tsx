@@ -2,6 +2,8 @@ import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
 import { AuthLayout } from '@/components/layout/AuthLayout'
 import { LandingPage } from '@/pages/landing'
+import { PrivacyPage } from '@/pages/privacy'
+import { TermsPage } from '@/pages/terms'
 import { DashboardPage } from '@/pages/dashboard'
 import { ProjectsPage } from '@/pages/projects'
 import { TasksPage } from '@/pages/tasks'
@@ -12,6 +14,8 @@ import { NotFoundPage } from '@/pages/not-found'
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
+  { path: 'privacy', element: <PrivacyPage /> },
+  { path: 'terms', element: <TermsPage /> },
   {
     element: <AppLayout />,
     children: [
