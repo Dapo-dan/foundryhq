@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
 function DealCard() {
@@ -67,11 +68,8 @@ export function Hero() {
         for founding teams, from day zero to Series B.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-3.5">
-        <Button size="lg" className="px-8 text-[15px]">
-          Start for free →
-        </Button>
-        <Button variant="outline" size="lg" className="px-8 text-[15px] text-text-secondary">
-          See a demo
+        <Button asChild size="lg" className="px-8 text-[15px]">
+          <Link to="/onboarding">Start for free →</Link>
         </Button>
       </div>
       <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:items-start">

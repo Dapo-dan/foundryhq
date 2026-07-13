@@ -23,7 +23,10 @@ const FEATURES = [
 
 export function Features() {
   return (
-    <section className="flex flex-col items-center gap-14 px-6 py-16 sm:px-10 lg:px-[100px] lg:py-24">
+    <section
+      id="features"
+      className="flex scroll-mt-24 flex-col items-center gap-14 px-6 py-16 sm:px-10 lg:px-[100px] lg:py-24"
+    >
       <div className="flex flex-col items-center gap-3.5 text-center">
         <h2 className="max-w-2xl text-3xl font-extrabold text-text-primary sm:text-4xl lg:text-[44px]">
           Everything your team needs
