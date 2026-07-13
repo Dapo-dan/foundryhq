@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
 import { DashboardPage } from '@/pages/dashboard'
+import { ProjectsPage } from '@/pages/projects'
 import { NotFoundPage } from '@/pages/not-found'
 
 export const router = createBrowserRouter([
@@ -9,6 +10,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'projects', element: <ProjectsPage /> },
     ],
   },
   {
