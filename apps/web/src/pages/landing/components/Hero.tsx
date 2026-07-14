@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { SectionContainer } from './SectionContainer'
 
 function DealCard() {
   return (
@@ -53,7 +54,7 @@ function SprintCard() {
 
 export function Hero() {
   return (
-    <section className="flex flex-col items-center gap-7 px-6 pb-20 pt-16 text-center sm:px-10 lg:px-[100px] lg:pt-24">
+    <SectionContainer className="flex flex-col items-center gap-7 pb-20 pt-16 text-center lg:pt-24">
       <div className="flex items-center gap-2 rounded-full bg-[#EFF6FF] px-3.5 py-1.5">
         <span className="h-1.5 w-1.5 rounded-full bg-brand" />
         <span className="text-[13px] font-medium text-brand-accent">Built for founding teams</span>
@@ -67,16 +68,17 @@ export function Hero() {
         Replace your CRM, task tracker, meeting notes, and KPI dashboard — one fast workspace built
         for founding teams, from day zero to Series B.
       </p>
-      <div className="flex flex-wrap items-center justify-center gap-3.5">
+      <div className="flex flex-col items-center gap-3">
         <Button asChild size="lg" className="px-8 text-[15px]">
           <Link to="/onboarding">Start for free →</Link>
         </Button>
+        <p className="text-xs text-text-subtle">Free to start · No credit card required</p>
       </div>
       <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
         <DealCard />
         <KpiCard />
         <SprintCard />
       </div>
-    </section>
+    </SectionContainer>
   )
 }

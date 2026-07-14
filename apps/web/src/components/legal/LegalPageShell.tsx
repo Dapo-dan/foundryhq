@@ -9,7 +9,10 @@ interface LegalPageShellProps {
 export function LegalPageShell({ title, children }: LegalPageShellProps) {
   return (
     <div className="mx-auto flex min-h-svh max-w-2xl flex-col gap-8 px-6 py-16">
-      <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/"
+        className="rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
         ← Back to home
       </Link>
       <div className="flex flex-col gap-4">
