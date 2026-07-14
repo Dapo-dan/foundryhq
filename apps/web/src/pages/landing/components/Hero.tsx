@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Reveal } from './Reveal'
 import { SectionContainer } from './SectionContainer'
 
 function DealCard() {
@@ -55,30 +56,32 @@ function SprintCard() {
 export function Hero() {
   return (
     <SectionContainer className="flex flex-col items-center gap-7 pb-20 pt-16 text-center lg:pt-24">
-      <div className="flex items-center gap-2 rounded-full bg-[#EFF6FF] px-3.5 py-1.5">
-        <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-        <span className="text-[13px] font-medium text-brand-accent">Built for founding teams</span>
-      </div>
-      <h1 className="max-w-3xl text-4xl font-extrabold leading-[1.05] text-text-primary sm:text-5xl lg:text-[64px]">
-        One workspace.
-        <br />
-        Every startup need.
-      </h1>
-      <p className="max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg">
-        Replace your CRM, task tracker, meeting notes, and KPI dashboard — one fast workspace built
-        for founding teams, from day zero to Series B.
-      </p>
-      <div className="flex flex-col items-center gap-3">
-        <Button asChild size="lg" className="px-8 text-[15px]">
-          <Link to="/onboarding">Start for free →</Link>
-        </Button>
-        <p className="text-xs text-text-subtle">Free to start · No credit card required</p>
-      </div>
-      <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+      <Reveal className="flex flex-col items-center gap-7">
+        <div className="flex items-center gap-2 rounded-full bg-[#EFF6FF] px-3.5 py-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+          <span className="text-[13px] font-medium text-brand-accent">Built for founding teams</span>
+        </div>
+        <h1 className="max-w-3xl text-4xl font-extrabold leading-[1.05] text-text-primary sm:text-5xl lg:text-[64px]">
+          One workspace.
+          <br />
+          Every startup need.
+        </h1>
+        <p className="max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg">
+          Replace your CRM, task tracker, meeting notes, and KPI dashboard — one fast workspace
+          built for founding teams, from day zero to Series B.
+        </p>
+        <div className="flex flex-col items-center gap-3">
+          <Button asChild size="lg" className="px-8 text-[15px]">
+            <Link to="/onboarding">Start for free →</Link>
+          </Button>
+          <p className="text-xs text-text-subtle">Free to start · No credit card required</p>
+        </div>
+      </Reveal>
+      <Reveal delayMs={150} className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
         <DealCard />
         <KpiCard />
         <SprintCard />
-      </div>
+      </Reveal>
     </SectionContainer>
   )
 }

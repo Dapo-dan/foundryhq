@@ -1,4 +1,5 @@
 import { BarChart3, Users, Zap } from 'lucide-react'
+import { Reveal } from './Reveal'
 import { SectionContainer } from './SectionContainer'
 
 const FEATURES = [
@@ -37,14 +38,14 @@ export function Features() {
         </p>
       </div>
       <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
-        {FEATURES.map(({ icon: Icon, title, desc, bg }) => (
-          <div key={title} className={`flex flex-col gap-4 rounded-2xl ${bg} p-9`}>
+        {FEATURES.map(({ icon: Icon, title, desc, bg }, index) => (
+          <Reveal key={title} delayMs={index * 100} className={`flex flex-col gap-4 rounded-2xl ${bg} p-9`}>
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white">
               <Icon aria-hidden="true" className="h-6 w-6 text-text-primary" />
             </div>
             <h3 className="text-xl font-bold text-text-primary">{title}</h3>
             <p className="text-sm leading-[1.7] text-text-secondary">{desc}</p>
-          </div>
+          </Reveal>
         ))}
       </div>
     </SectionContainer>
