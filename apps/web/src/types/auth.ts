@@ -11,7 +11,6 @@ export interface AuthSession {
 export interface SignUpInput {
   email: string
   password: string
-  marketingOptIn: boolean
 }
 
 export interface SignInInput {

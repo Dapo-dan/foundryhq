@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout'
 import { AuthLayout } from '@/components/layout/AuthLayout'
 import { LandingPage } from '@/pages/landing'
@@ -8,7 +8,8 @@ import { DashboardPage } from '@/pages/dashboard'
 import { ProjectsPage } from '@/pages/projects'
 import { TasksPage } from '@/pages/tasks'
 import { SettingsPage } from '@/pages/settings'
-import { AuthPage } from '@/pages/auth'
+import { SignInPage } from '@/pages/auth/sign-in'
+import { SignUpPage } from '@/pages/auth/sign-up'
 import { OnboardingPage } from '@/pages/onboarding'
 import { NotFoundPage } from '@/pages/not-found'
 
@@ -28,7 +29,14 @@ export const router = createBrowserRouter([
   {
     element: <AuthLayout />,
     children: [
-      { path: 'auth', element: <AuthPage /> },
+      {
+        path: 'auth',
+        children: [
+          { index: true, element: <Navigate to="sign-in" replace /> },
+          { path: 'sign-in', element: <SignInPage /> },
+          { path: 'sign-up', element: <SignUpPage /> },
+        ],
+      },
       { path: 'onboarding', element: <OnboardingPage /> },
     ],
   },

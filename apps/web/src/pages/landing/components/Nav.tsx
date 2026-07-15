@@ -21,7 +21,7 @@ export function Nav() {
       </div>
       <div className="flex items-center gap-5">
         <Link
-          to="/auth"
+          to="/auth/sign-in"
           className={`hidden text-sm text-text-secondary hover:text-text-primary sm:inline ${FOCUS_RING}`}
         >
           Sign in
