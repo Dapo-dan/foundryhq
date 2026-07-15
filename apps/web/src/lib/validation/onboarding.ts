@@ -5,3 +5,5 @@ export const workspaceSchema = z.object({
 })
 
 export type WorkspaceFormValues = Required<z.infer<typeof workspaceSchema>>
+
+export const inviteEmailSchema = z.string().email('Enter a valid email address')

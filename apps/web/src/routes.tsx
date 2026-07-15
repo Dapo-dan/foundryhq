@@ -16,6 +16,8 @@ import { ResetPasswordPage } from '@/pages/auth/reset-password'
 import { WorkspaceStepPage } from '@/pages/onboarding/workspace'
 import { TeamSizeStepPage } from '@/pages/onboarding/team-size'
 import { RoleStepPage } from '@/pages/onboarding/role'
+import { ToolsStepPage } from '@/pages/onboarding/tools'
+import { InviteStepPage } from '@/pages/onboarding/invite'
 import { NotFoundPage } from '@/pages/not-found'
 
 export const router = createBrowserRouter([
@@ -54,6 +56,8 @@ export const router = createBrowserRouter([
               { path: 'workspace', element: <WorkspaceStepPage /> },
               { path: 'team-size', element: <TeamSizeStepPage /> },
               { path: 'role', element: <RoleStepPage /> },
+              { path: 'tools', element: <ToolsStepPage /> },
+              { path: 'invite', element: <InviteStepPage /> },
             ],
           },
         ],
