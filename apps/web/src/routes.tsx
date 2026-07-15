@@ -10,6 +10,8 @@ import { TasksPage } from '@/pages/tasks'
 import { SettingsPage } from '@/pages/settings'
 import { SignInPage } from '@/pages/auth/sign-in'
 import { SignUpPage } from '@/pages/auth/sign-up'
+import { ForgotPasswordPage } from '@/pages/auth/forgot-password'
+import { ResetPasswordPage } from '@/pages/auth/reset-password'
 import { OnboardingPage } from '@/pages/onboarding'
 import { NotFoundPage } from '@/pages/not-found'
 
@@ -35,6 +37,8 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="sign-in" replace /> },
           { path: 'sign-in', element: <SignInPage /> },
           { path: 'sign-up', element: <SignUpPage /> },
+          { path: 'forgot-password', element: <ForgotPasswordPage /> },
+          { path: 'reset-password', element: <ResetPasswordPage /> },
         ],
       },
       { path: 'onboarding', element: <OnboardingPage /> },

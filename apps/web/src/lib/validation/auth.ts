@@ -18,3 +18,21 @@ export const signUpSchema = z.object({
 })
 
 export type SignUpFormValues = Required<z.infer<typeof signUpSchema>>
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
+})
+
+export type ForgotPasswordFormValues = Required<z.infer<typeof forgotPasswordSchema>>
+
+export const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  })
+
+export type ResetPasswordFormValues = Required<z.infer<typeof resetPasswordSchema>>

@@ -17,7 +17,7 @@ export function AuthTopBar({ navLabel, navHref }: AuthTopBarProps) {
         <span className="text-[15px] font-bold text-foreground">FoundryHQ</span>
       </Link>
       <Link to={navHref} className="text-sm text-text-secondary hover:text-foreground">
-        {navLabel} →
+        {navLabel}
       </Link>
     </div>
   )

@@ -6,7 +6,7 @@ import { SignUpForm } from './components/SignUpForm'
 export function SignUpPage() {
   return (
     <>
-      <AuthTopBar navLabel="Already have an account? Sign in" navHref="/auth/sign-in" />
+      <AuthTopBar navLabel="Already have an account? Sign in →" navHref="/auth/sign-in" />
       <div className="flex min-h-[calc(100svh-65px)] flex-col items-center justify-center gap-4 px-4 py-12">
         <div className="w-full max-w-[440px]">
           <AuthCard
