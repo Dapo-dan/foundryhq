@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Logo } from '@/components/layout/Logo'
 
 interface AuthTopBarProps {
   navLabel: string
@@ -12,10 +13,7 @@ interface AuthTopBarProps {
 export function AuthTopBar({ navLabel, navHref }: AuthTopBarProps) {
   return (
     <div className="flex items-center justify-between border-b border-border bg-white px-6 py-4 sm:px-20">
-      <Link to="/" className="flex items-center gap-2">
-        <div className="size-6 rounded bg-brand" />
-        <span className="text-[15px] font-bold text-foreground">FoundryHQ</span>
-      </Link>
+      <Logo />
       <Link to={navHref} className="text-sm text-text-secondary hover:text-foreground">
         {navLabel}
       </Link>

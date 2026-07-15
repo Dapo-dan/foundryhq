@@ -1,5 +1,6 @@
 import { ChevronLeft } from 'lucide-react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Logo } from '@/components/layout/Logo'
 import { cn } from '@/lib/utils'
 import { useOnboardingStore } from '@/store/slices/onboarding'
 import { ONBOARDING_STEPS, type OnboardingStep } from '@/types/onboarding'
@@ -36,38 +37,41 @@ export function OnboardingLayout() {
   const stepNumber = stepIndex + 2 // +1 for 0-index, +1 for sign-up being step 1
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <div className="flex gap-1.5">
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-            <div
-              key={i}
-              className={cn(
-                'h-1 flex-1 rounded-full',
-                i < stepNumber ? 'bg-primary' : 'bg-muted'
-              )}
-            />
-          ))}
-        </div>
-        <div className="flex items-center justify-between">
-          {stepIndex > 0 ? (
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="size-4" />
-              Back
-            </button>
-          ) : (
-            <span />
-          )}
-          <span className="text-sm text-muted-foreground">
-            Step {stepNumber} of {TOTAL_STEPS}
-          </span>
+    <>
+      <div className="flex items-center justify-between border-b border-border bg-white px-6 py-4 sm:px-20">
+        <Logo />
+        <span className="text-sm text-text-secondary">
+          Step {stepNumber} of {TOTAL_STEPS}
+        </span>
+      </div>
+      <div className="flex min-h-[calc(100svh-65px)] items-center justify-center px-4 py-12">
+        <div className="flex w-full max-w-[440px] flex-col gap-8">
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-1.5">
+              {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'h-1 flex-1 rounded-full',
+                    i < stepNumber ? 'bg-primary' : 'bg-muted'
+                  )}
+                />
+              ))}
+            </div>
+            {stepIndex > 0 && (
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft className="size-4" />
+                Back
+              </button>
+            )}
+          </div>
+          <Outlet />
         </div>
       </div>
-      <Outlet />
-    </div>
+    </>
   )
 }

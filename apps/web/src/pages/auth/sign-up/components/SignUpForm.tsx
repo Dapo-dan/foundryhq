@@ -26,9 +26,7 @@ export function SignUpForm() {
   })
 
   function onSubmit(values: SignUpFormValues) {
-    // /onboarding still points at a placeholder screen until the wizard
-    // routes land — repointed to /onboarding/workspace once those exist.
-    signUp.mutate(values, { onSuccess: () => navigate('/onboarding') })
+    signUp.mutate(values, { onSuccess: () => navigate('/onboarding/workspace') })
   }
 
   return (
