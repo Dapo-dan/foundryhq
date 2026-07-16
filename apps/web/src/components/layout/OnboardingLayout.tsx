@@ -5,8 +5,11 @@ import { cn } from '@/lib/utils'
 import { useOnboardingStore } from '@/store/slices/onboarding'
 import { ONBOARDING_STEPS, type OnboardingStep } from '@/types/onboarding'
 
-// Sign-up (at /auth/sign-up) is step 1 of 7; the six steps here are 2-7.
-const TOTAL_STEPS = ONBOARDING_STEPS.length + 1
+// Per design: only workspace/team-size/role/tools/invite are numbered steps
+// ("Step N of 5") — sign-up isn't counted, and welcome is an unnumbered
+// completion screen with no progress chrome at all.
+const NUMBERED_STEPS = ONBOARDING_STEPS.filter((step) => step !== 'welcome')
+const TOTAL_STEPS = NUMBERED_STEPS.length
 
 function currentStepFromPath(pathname: string): OnboardingStep | undefined {
   return ONBOARDING_STEPS.find((step) => pathname.endsWith(step))
@@ -34,7 +37,23 @@ export function OnboardingLayout() {
     return <Navigate to={`/onboarding/${ONBOARDING_STEPS[firstIncompleteIndex]}`} replace />
   }
 
-  const stepNumber = stepIndex + 2 // +1 for 0-index, +1 for sign-up being step 1
+  if (currentStep === 'welcome') {
+    return (
+      <>
+        <div className="flex items-center justify-center border-b border-border bg-white px-6 py-4 sm:px-20">
+          <Logo />
+        </div>
+        <div className="flex min-h-[calc(100svh-65px)] items-center justify-center px-4 py-12">
+          <div className="flex w-full max-w-[440px] flex-col gap-8">
+            <Outlet />
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  const numberedStepIndex = NUMBERED_STEPS.indexOf(currentStep)
+  const stepNumber = numberedStepIndex + 1
 
   return (
     <>
@@ -58,7 +77,7 @@ export function OnboardingLayout() {
                 />
               ))}
             </div>
-            {stepIndex > 0 && (
+            {numberedStepIndex > 0 && (
               <button
                 type="button"
                 onClick={() => navigate(-1)}
