@@ -33,6 +33,7 @@ npm-debug.log*
 
 # AI workflows
 .ai/
+docs/guides
 
 coverage.out
 bin/
