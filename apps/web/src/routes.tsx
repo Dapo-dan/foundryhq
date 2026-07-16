@@ -9,6 +9,12 @@ import { DashboardPage } from '@/pages/dashboard'
 import { ProjectsPage } from '@/pages/projects'
 import { TasksPage } from '@/pages/tasks'
 import { SettingsPage } from '@/pages/settings'
+import { DealPipelinePage } from '@/pages/crm/deal-pipeline'
+import { CompaniesPage } from '@/pages/crm/companies'
+import { ContactsPage } from '@/pages/crm/contacts'
+import { SprintsPage } from '@/pages/sprints'
+import { MetricsPage } from '@/pages/kpis/metrics'
+import { ReportsPage } from '@/pages/kpis/reports'
 import { SignInPage } from '@/pages/auth/sign-in'
 import { SignUpPage } from '@/pages/auth/sign-up'
 import { ForgotPasswordPage } from '@/pages/auth/forgot-password'
@@ -31,7 +37,13 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'tasks', element: <TasksPage /> },
+      { path: 'sprints', element: <SprintsPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'crm/deal-pipeline', element: <DealPipelinePage /> },
+      { path: 'crm/companies', element: <CompaniesPage /> },
+      { path: 'crm/contacts', element: <ContactsPage /> },
+      { path: 'kpis/metrics', element: <MetricsPage /> },
+      { path: 'kpis/reports', element: <ReportsPage /> },
     ],
   },
   {
