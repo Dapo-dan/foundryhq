@@ -31,6 +31,9 @@ export function WelcomeStepPage() {
   ]
 
   function onGoToDashboard() {
+    // Mark completion before navigating so a future sign-in knows this
+    // account already finished onboarding (see store's `onboardingComplete`).
+    useOnboardingStore.getState().markOnboardingComplete()
     // Navigate first, then clear the wizard state on the next tick — resetting
     // first re-renders OnboardingLayout (still mounted on this route) with an
     // empty `completedSteps`, and its step-guard redirects back to the first

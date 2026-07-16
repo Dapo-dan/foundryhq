@@ -27,7 +27,7 @@ export function Nav() {
           Sign in
         </Link>
         <Button asChild>
-          <Link to="/onboarding">Get started</Link>
+          <Link to="/auth/sign-up">Get started</Link>
         </Button>
       </div>
     </SectionContainer>

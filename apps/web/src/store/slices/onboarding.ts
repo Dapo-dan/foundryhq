@@ -9,12 +9,17 @@ interface OnboardingState {
   tools: string[]
   invites: string[]
   completedSteps: OnboardingStep[]
+  // Whether this account has ever finished the wizard — distinct from
+  // `completedSteps`, which `reset()` clears once the user reaches the
+  // dashboard. Sign-in reads this to decide whether to resume onboarding.
+  onboardingComplete: boolean
   setWorkspaceName: (name: string) => void
   setTeamSize: (size: TeamSize) => void
   setRole: (role: Role) => void
   toggleTool: (tool: string) => void
   setInvites: (emails: string[]) => void
   markStepComplete: (step: OnboardingStep) => void
+  markOnboardingComplete: () => void
   reset: () => void
 }
 
@@ -34,6 +39,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       ...initialState,
+      onboardingComplete: false,
       setWorkspaceName: (name) => set({ workspaceName: name }),
       setTeamSize: (size) => set({ teamSize: size }),
       setRole: (role) => set({ role }),
@@ -50,6 +56,9 @@ export const useOnboardingStore = create<OnboardingState>()(
             ? state.completedSteps
             : [...state.completedSteps, step],
         })),
+      markOnboardingComplete: () => set({ onboardingComplete: true }),
+      // Only clears wizard progress (`initialState`) — `onboardingComplete`
+      // is deliberately excluded so it survives this reset.
       reset: () => set(initialState),
     }),
     { name: 'foundryhq-onboarding', storage: createJSONStorage(() => sessionStorage) }

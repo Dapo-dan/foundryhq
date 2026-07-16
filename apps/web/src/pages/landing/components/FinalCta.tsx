@@ -15,7 +15,7 @@ export function FinalCta() {
           momentum.
         </p>
         <Button asChild size="lg" className="bg-white px-10 text-base text-lp-dark hover:bg-white/90">
-          <Link to="/onboarding">Start building today →</Link>
+          <Link to="/auth/sign-up">Start building today →</Link>
         </Button>
         <p className="text-[13px] text-[#444444]">Free to start · No credit card required</p>
       </Reveal>

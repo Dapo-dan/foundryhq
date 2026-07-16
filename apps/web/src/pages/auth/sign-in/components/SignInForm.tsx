@@ -15,6 +15,8 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { Separator } from '@/components/ui/separator'
 import { useSignIn } from '@/hooks/useSignIn'
 import { signInSchema, type SignInFormValues } from '@/lib/validation/auth'
+import { useOnboardingStore } from '@/store/slices/onboarding'
+import { ONBOARDING_STEPS } from '@/types/onboarding'
 import { OAuthButtons } from '../../components/OAuthButtons'
 
 export function SignInForm() {
@@ -26,7 +28,19 @@ export function SignInForm() {
   })
 
   function onSubmit(values: SignInFormValues) {
-    signIn.mutate(values, { onSuccess: () => navigate('/dashboard') })
+    signIn.mutate(values, {
+      onSuccess: () => {
+        const { onboardingComplete, completedSteps } = useOnboardingStore.getState()
+        if (onboardingComplete) {
+          navigate('/dashboard')
+          return
+        }
+        // Resume exactly where they left off, same rule OnboardingLayout's
+        // step-guard uses to find the first step they haven't finished yet.
+        const nextStep = ONBOARDING_STEPS.find((step) => !completedSteps.includes(step))
+        navigate(`/onboarding/${nextStep ?? 'workspace'}`)
+      },
+    })
   }
 
   return (

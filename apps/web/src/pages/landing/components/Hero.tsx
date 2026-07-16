@@ -72,7 +72,7 @@ export function Hero() {
         </p>
         <div className="flex flex-col items-center gap-3">
           <Button asChild size="lg" className="px-8 text-[15px]">
-            <Link to="/onboarding">Start for free →</Link>
+            <Link to="/auth/sign-up">Start for free →</Link>
           </Button>
           <p className="text-xs text-text-subtle">Free to start · No credit card required</p>
         </div>
