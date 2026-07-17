@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AuthSession, User } from '@/types/auth'
+import type { AuthSession, User } from '@foundryhq/shared-types'
 
 interface AuthState {
   user: User | null

@@ -4,7 +4,7 @@ import type {
   ResetPasswordInput,
   SignInInput,
   SignUpInput,
-} from '@/types/auth'
+} from '@foundryhq/shared-types'
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))

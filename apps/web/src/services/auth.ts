@@ -7,7 +7,7 @@ import type {
   ResetPasswordInput,
   SignInInput,
   SignUpInput,
-} from '@/types/auth'
+} from '@foundryhq/shared-types'
 
 export function signUp(input: SignUpInput) {
   return USE_MOCK_API ? mockSignUp(input) : apiPost<AuthSession>('/auth/register', input)
