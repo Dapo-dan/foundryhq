@@ -58,3 +58,11 @@ export function apiPost<TResponse, TBody = unknown>(url: string, body?: TBody) {
 export function apiPatch<TResponse, TBody = unknown>(url: string, body?: TBody) {
   return apiClient.patch(url, body) as unknown as Promise<TResponse>
 }
+
+export function apiPut<TResponse, TBody = unknown>(url: string, body?: TBody) {
+  return apiClient.put(url, body) as unknown as Promise<TResponse>
+}
+
+export function apiDelete<TResponse>(url: string) {
+  return apiClient.delete(url) as unknown as Promise<TResponse>
+}
