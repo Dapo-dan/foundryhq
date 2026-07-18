@@ -17,7 +17,10 @@ import (
 	"github.com/foundryhq/foundryhq/apps/api/internal/config"
 	"github.com/foundryhq/foundryhq/apps/api/internal/handlers"
 	"github.com/foundryhq/foundryhq/apps/api/internal/middleware"
+	"github.com/foundryhq/foundryhq/apps/api/internal/repositories/postgres"
+	"github.com/foundryhq/foundryhq/apps/api/internal/usecases"
 	"github.com/foundryhq/foundryhq/apps/api/pkg/database"
+	"github.com/foundryhq/foundryhq/apps/api/pkg/jwt"
 	"github.com/foundryhq/foundryhq/apps/api/pkg/logger"
 )
 
@@ -76,6 +79,21 @@ func main() {
 	router.GET("/health", healthHandler.Health)
 	router.GET("/ready", healthHandler.Ready)
 	router.GET("/version", healthHandler.Version)
+
+	jwtManager := jwt.NewManager(cfg.JWTAccessSecret, cfg.JWTRefreshSecret, cfg.JWTAccessExpiry, cfg.JWTRefreshExpiry)
+	authUsecase := usecases.NewAuthUsecase(
+		postgres.NewUserRepository(db),
+		postgres.NewRefreshTokenRepository(db),
+		jwtManager,
+	)
+	// secureCookies (the refresh-token cookie's Secure flag) must be false
+	// for local HTTP dev — browsers refuse Secure cookies over plain HTTP —
+	// and true in production, which is expected to run behind HTTPS.
+	authHandler := handlers.NewAuthHandler(authUsecase, cfg.Env == "production")
+	router.POST("/auth/register", authHandler.Register)
+	router.POST("/auth/login", authHandler.Login)
+	router.POST("/auth/refresh", authHandler.Refresh)
+	router.POST("/auth/logout", authHandler.Logout)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,

@@ -93,6 +93,12 @@ func (m *Manager) generate(userID uuid.UUID, tokenType string, secret []byte, ex
 		UserID:    userID,
 		TokenType: tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
+			// ID (jti) guarantees uniqueness: without it, two tokens minted
+			// for the same user within the same second (IssuedAt/ExpiresAt
+			// truncate to second precision) would be byte-identical, which
+			// breaks refresh-token rotation and would collide on the
+			// refresh_tokens table's token_hash unique constraint.
+			ID:        uuid.NewString(),
 			Issuer:    issuer,
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),

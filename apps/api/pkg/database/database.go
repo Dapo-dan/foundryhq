@@ -34,8 +34,11 @@ func Connect(cfg Config) (*gorm.DB, error) {
 		RawQuery: url.Values{"sslmode": {cfg.SSLMode}}.Encode(),
 	}
 
-	// &gorm.Config{} uses GORM's defaults; a custom config isn't needed yet.
-	db, err := gorm.Open(postgres.Open(dsn.String()), &gorm.Config{})
+	// TranslateError converts driver-specific errors (e.g. Postgres' unique
+	// violation code) into GORM's portable sentinel errors (gorm.ErrDuplicatedKey),
+	// so repositories can use errors.Is without depending on the pgx driver's
+	// error types directly.
+	db, err := gorm.Open(postgres.Open(dsn.String()), &gorm.Config{TranslateError: true})
 	if err != nil {
 		// %w wraps the original error so callers can still use errors.Is/As
 		// on it, while adding context about what operation failed.
