@@ -43,8 +43,10 @@ func main() {
 		log.Fatalf("creating logger: %v", err)
 	}
 	// zap buffers writes for performance; Sync flushes them so logs aren't
-	// lost if the process exits abruptly.
-	defer zapLogger.Sync()
+	// lost if the process exits abruptly. Its error is discarded — Sync
+	// commonly errors on stdout/stderr (e.g. "invalid argument" for a
+	// non-syncable fd), which isn't actionable at shutdown.
+	defer func() { _ = zapLogger.Sync() }()
 
 	db, err := database.Connect(database.Config{
 		Host:     cfg.DBHost,

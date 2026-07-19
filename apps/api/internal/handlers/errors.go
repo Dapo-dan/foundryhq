@@ -26,7 +26,8 @@ func handleError(c *gin.Context, err error) {
 		return
 	}
 
-	c.Error(err)
+	// c.Error only ever errors if err is nil, which can't happen here.
+	_ = c.Error(err)
 	c.JSON(http.StatusInternalServerError, gin.H{
 		"error": gin.H{"code": apperrors.CodeInternal, "message": "internal server error"},
 	})
