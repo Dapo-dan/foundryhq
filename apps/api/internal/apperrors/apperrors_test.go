@@ -16,6 +16,7 @@ func TestStatusFor(t *testing.T) {
 		{CodeForbidden, http.StatusForbidden},
 		{CodeNotFound, http.StatusNotFound},
 		{CodeConflict, http.StatusConflict},
+		{CodeRateLimited, http.StatusTooManyRequests},
 		{CodeInternal, http.StatusInternalServerError},
 		{Code("unknown_code"), http.StatusInternalServerError},
 		{Code(""), http.StatusInternalServerError},
@@ -43,6 +44,9 @@ func TestConstructors(t *testing.T) {
 	}
 	if err := Validation("title", "title is required"); err.Code != CodeValidation || err.Field != "title" {
 		t.Errorf("Validation() = %+v", err)
+	}
+	if err := RateLimited("too many attempts"); err.Code != CodeRateLimited {
+		t.Errorf("RateLimited() = %+v", err)
 	}
 
 	cause := errors.New("connection refused")

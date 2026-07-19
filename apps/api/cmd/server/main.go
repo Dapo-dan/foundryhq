@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"golang.org/x/time/rate"
 
 	"github.com/foundryhq/foundryhq/apps/api/internal/config"
 	"github.com/foundryhq/foundryhq/apps/api/internal/handlers"
@@ -90,8 +91,15 @@ func main() {
 	// for local HTTP dev — browsers refuse Secure cookies over plain HTTP —
 	// and true in production, which is expected to run behind HTTPS.
 	authHandler := handlers.NewAuthHandler(authUsecase, cfg.Env == "production")
+	// loginRateLimiter throttles brute-force credential guessing per client
+	// IP — burst requests allowed immediately, refilling gradually over the
+	// configured window rather than resetting all at once.
+	loginRateLimiter := middleware.NewRateLimiter(
+		rate.Every(cfg.LoginRateLimitWindow/time.Duration(cfg.LoginRateLimitBurst)),
+		cfg.LoginRateLimitBurst,
+	)
 	router.POST("/auth/register", authHandler.Register)
-	router.POST("/auth/login", authHandler.Login)
+	router.POST("/auth/login", loginRateLimiter.Limit(), authHandler.Login)
 	router.POST("/auth/refresh", authHandler.Refresh)
 	router.POST("/auth/logout", authHandler.Logout)
 

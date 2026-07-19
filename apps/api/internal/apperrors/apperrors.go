@@ -16,6 +16,7 @@ const (
 	CodeForbidden    Code = "forbidden"
 	CodeNotFound     Code = "not_found"
 	CodeConflict     Code = "conflict"
+	CodeRateLimited  Code = "rate_limited"
 	CodeInternal     Code = "internal_error"
 )
 
@@ -25,6 +26,7 @@ var statusByCode = map[Code]int{
 	CodeForbidden:    http.StatusForbidden,
 	CodeNotFound:     http.StatusNotFound,
 	CodeConflict:     http.StatusConflict,
+	CodeRateLimited:  http.StatusTooManyRequests,
 	CodeInternal:     http.StatusInternalServerError,
 }
 
@@ -74,6 +76,11 @@ func Forbidden(message string) *Error {
 // Unauthorized constructs a 401 apperrors.Error.
 func Unauthorized(message string) *Error {
 	return &Error{Code: CodeUnauthorized, Message: message}
+}
+
+// RateLimited constructs a 429 apperrors.Error.
+func RateLimited(message string) *Error {
+	return &Error{Code: CodeRateLimited, Message: message}
 }
 
 // Validation constructs a 400 apperrors.Error for the named field.

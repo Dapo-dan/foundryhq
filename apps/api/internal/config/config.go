@@ -37,6 +37,13 @@ type Config struct {
 	// adr/0004-jwt-access-refresh-tokens.md) can't use a "*" wildcard, so
 	// this must be an explicit list rather than "allow everything".
 	CORSAllowedOrigins []string
+
+	// LoginRateLimitBurst/LoginRateLimitWindow bound login attempts per
+	// client IP to LoginRateLimitBurst requests per LoginRateLimitWindow,
+	// refilling gradually rather than resetting all at once — see
+	// middleware.NewRateLimiter.
+	LoginRateLimitBurst  int
+	LoginRateLimitWindow time.Duration
 }
 
 // Load reads configuration from a local .env file, falling back to real
@@ -62,6 +69,8 @@ func Load() (*Config, error) {
 	v.SetDefault("JWT_ACCESS_EXPIRY", "15m")
 	v.SetDefault("JWT_REFRESH_EXPIRY", "168h")
 	v.SetDefault("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
+	v.SetDefault("LOGIN_RATE_LIMIT_BURST", 5)
+	v.SetDefault("LOGIN_RATE_LIMIT_WINDOW", "1m")
 
 	if err := v.ReadInConfig(); err != nil {
 		// A missing .env file is expected outside local dev (e.g. in
@@ -88,6 +97,11 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("parsing JWT_REFRESH_EXPIRY: %w", err)
 	}
 
+	loginRateLimitWindow, err := time.ParseDuration(v.GetString("LOGIN_RATE_LIMIT_WINDOW"))
+	if err != nil {
+		return nil, fmt.Errorf("parsing LOGIN_RATE_LIMIT_WINDOW: %w", err)
+	}
+
 	var corsAllowedOrigins []string
 	for _, origin := range strings.Split(v.GetString("CORS_ALLOWED_ORIGINS"), ",") {
 		if origin = strings.TrimSpace(origin); origin != "" {
@@ -112,5 +126,8 @@ func Load() (*Config, error) {
 		JWTRefreshExpiry: refreshExpiry,
 
 		CORSAllowedOrigins: corsAllowedOrigins,
+
+		LoginRateLimitBurst:  v.GetInt("LOGIN_RATE_LIMIT_BURST"),
+		LoginRateLimitWindow: loginRateLimitWindow,
 	}, nil
 }

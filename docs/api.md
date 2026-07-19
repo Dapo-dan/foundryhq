@@ -106,6 +106,7 @@ Human-curated overview of FoundryHQ's REST API. This is the index — the genera
 | `forbidden` | 403 | Authenticated, but the workspace role doesn't permit this action |
 | `not_found` | 404 | Resource doesn't exist, or exists in a different workspace |
 | `conflict` | 409 | e.g., inviting an email already a member |
+| `rate_limited` | 429 | Too many requests from this client (e.g. `/auth/login` attempts) — retry after a delay |
 | `internal_error` | 500 | Unexpected server error — logged with a request ID for correlation |
 
 ## Adding an Endpoint
