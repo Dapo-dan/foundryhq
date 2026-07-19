@@ -61,7 +61,7 @@ cp apps/api/.env.example apps/api/.env
 ### 3. Start Infrastructure
 
 ```bash
-docker compose up postgres redis -d
+docker compose up postgres -d
 ```
 
 ### 4. Backend
@@ -161,14 +161,14 @@ go test -cover ./...             # With coverage
 
 ### Frontend
 
+Testing isn't set up yet — `apps/web` has no test runner, no Vitest/React Testing Library dependency, and no `test` script. The only frontend check today is:
+
 ```bash
 cd apps/web
-pnpm test          # Run Vitest
-pnpm test:coverage # With coverage report
+pnpm lint # oxlint
 ```
 
-- Test components with React Testing Library
-- Minimum 70% coverage on new code
+This section will be updated with the runner, commands, and coverage expectations once frontend testing is added.
 
 ### What to Test
 

@@ -6,14 +6,13 @@
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://go.dev/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178C6?logo=typescript)](https://www.typescriptlang.org/)
-[![React Native](https://img.shields.io/badge/React_Native-0.74+-61DAFB?logo=react)](https://reactnative.dev/)
 [![CI](https://github.com/foundryhq/foundryhq/actions/workflows/ci.yml/badge.svg)](https://github.com/foundryhq/foundryhq/actions)
 
 ---
 
 ## Status
 
-This repo is in the planning/scaffolding stage — `apps/` and `packages/` contain directory structure only, no application code yet. The **Features** section below describes the target product; see [`docs/mvp.md`](docs/mvp.md) for what's actually being built first (Auth, Workspace/Team, Tasks) and [`docs/roadmap.md`](docs/roadmap.md) for sequencing after that.
+Auth is built end-to-end (API + web). The web app also has UI for CRM, tasks, goals, meetings, team, dashboard, and KPIs, but those currently run on mock data (`apps/web/src/lib/mock/`) rather than a live backend — only auth is wired to the real API so far. `apps/mobile` has no code yet, just directory scaffolding. The **Features** section below describes the target product; see [`docs/mvp.md`](docs/mvp.md) for what's actually being built first (Auth, Workspace/Team, Tasks) and [`docs/roadmap.md`](docs/roadmap.md) for sequencing after that.
 
 ---
 
