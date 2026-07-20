@@ -4,7 +4,7 @@
 
 ## Why this scope
 
-The smallest usable loop is: a user can sign up, create a workspace, bring in their team, and manage shared work. That's Auth + Workspace/Team + Tasks. Everything else (CRM, Meeting Notes, OKRs, KPI Dashboard, Notifications) depends on that loop existing first and is deferred to v1.1+.
+The smallest usable loop is: a user can sign up, create a workspace, bring in their team, and manage shared work. That's Auth + Workspace/Team + Tasks, on web and mobile both. Everything else (CRM, Meeting Notes, OKRs, KPI Dashboard, Notifications) depends on that loop existing first and is deferred to v1.1+.
 
 ## Version 1
 
@@ -32,6 +32,12 @@ The smallest usable loop is: a user can sign up, create a workspace, bring in th
 
 *Deferred to v1.1+: sprints, velocity tracking, sub-tasks, labels, priorities, due dates — see REQ-05, REQ-11.*
 
+### Mobile
+- [ ] Expo/React Native app scaffolded in `apps/mobile`, sharing types with web via `packages/shared-types`
+- [ ] Mobile screens for Auth, Workspace/Team, and Tasks ship alongside their web counterparts, not after
+
+*Deferred to v1.1+: mobile parity for CRM, Meeting Notes, OKRs, KPI Dashboard — see REQ-NFR-05.*
+
 ## Version 1.1+ (everything else)
 
 Moved out of v1 scope entirely, in rough sequence — see `roadmap.md` for the live prioritization:
@@ -46,8 +52,7 @@ Moved out of v1 scope entirely, in rough sequence — see `roadmap.md` for the l
 
 ## Out of scope for v1 (explicitly)
 
-- Any non-functional requirement beyond what's needed to ship v1 safely (see `requirements.md` for the full NFR list — REQ-NFR-01 and REQ-NFR-03 apply to v1; REQ-NFR-02, 04, 05 apply once the relevant modules ship)
-- Mobile app — v1 is web-only
+- Any non-functional requirement beyond what's needed to ship v1 safely (see `requirements.md` for the full NFR list — REQ-NFR-01 and REQ-NFR-03 apply to v1; REQ-NFR-02, 04 apply once the relevant modules ship; REQ-NFR-05 (full mobile parity) applies once CRM/Meeting Notes/OKRs/KPI Dashboard ship)
 - Everything in `roadmap.md`'s "Icebox" (white-label/self-hosted, SSO/SAML, custom fields/workflow builder)
 
 ## Definition of done for v1
@@ -55,4 +60,5 @@ Moved out of v1 scope entirely, in rough sequence — see `roadmap.md` for the l
 - [ ] A new user can register, verify they're logged in, and log out
 - [ ] A logged-in user can create a workspace and invite a second user by email
 - [ ] Both users can see, create, edit, delete, and reassign tasks on a shared Kanban board scoped to their workspace
+- [ ] The same auth, workspace, and task flows work on the mobile app, backed by the same API
 - [ ] REQ-01 (Auth) and REQ-11 (basic task management) are marked "Shipped" in `requirements.md`'s traceability table, and this checklist is fully checked

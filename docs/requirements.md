@@ -142,7 +142,7 @@ The system shall let a user create, edit, delete, and assign tasks within a work
 
 ## Constraints
 
-- Version 1 ships web-only; mobile (React Native/Expo) is out of scope until the modules it depends on exist — see `mvp.md`.
+- Version 1 ships Auth, Workspace/Team, and Tasks on both web and mobile (React Native/Expo); full mobile parity for the rest (CRM, Meeting Notes, OKRs, KPI Dashboard) is deferred to v1.1+ per REQ-NFR-05 — see `mvp.md`.
 - The backend must follow Clean Architecture (`handlers → usecases → domain ← repositories`) — see `architecture.md` and `adr/0002-clean-architecture-backend.md`. Requirements cannot be implemented by bypassing this boundary (e.g. business logic in a handler).
 - All persisted data goes through GORM against PostgreSQL 16 — no raw SQL except where documented per `architecture.md`'s rules.
 - Auth token lifetimes are fixed by REQ-NFR-03 (15-minute access, 7-day refresh) and are not configurable per workspace.

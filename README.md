@@ -12,7 +12,7 @@
 
 ## Status
 
-Auth is built end-to-end (API + web). The web app also has UI for CRM, tasks, goals, meetings, team, dashboard, and KPIs, but those currently run on mock data (`apps/web/src/lib/mock/`) rather than a live backend — only auth is wired to the real API so far. `apps/mobile` has no code yet, just directory scaffolding. The **Features** section below describes the target product; see [`docs/mvp.md`](docs/mvp.md) for what's actually being built first (Auth, Workspace/Team, Tasks) and [`docs/roadmap.md`](docs/roadmap.md) for sequencing after that.
+Auth is built end-to-end (API + web). The web app also has UI for CRM, tasks, goals, meetings, team, dashboard, and KPIs, but those currently run on mock data (`apps/web/src/lib/mock/`) rather than a live backend — only auth is wired to the real API so far. `apps/mobile` is now scaffolded (Expo + TypeScript, boots on iOS/Android/web) but has no screens yet. The **Features** section below describes the target product; see [`docs/mvp.md`](docs/mvp.md) for what's actually being built first (Auth, Workspace/Team, Tasks) and [`docs/roadmap.md`](docs/roadmap.md) for sequencing after that.
 
 ---
 
@@ -113,7 +113,7 @@ foundryhq/                          # Monorepo root
 | Layer | Technology |
 |---|---|
 | **Frontend** | React 18, TypeScript 5, Vite, Tailwind CSS, shadcn/ui, Zustand, React Query |
-| **Mobile** | React Native 0.74, Expo, React Navigation |
+| **Mobile** | React Native 0.86, Expo SDK 57, React Navigation |
 | **Backend** | Go 1.22, Gin, GORM |
 | **Database** | PostgreSQL 16 |
 | **Auth** | JWT (access + refresh tokens), OAuth 2.0 (Google, GitHub) |

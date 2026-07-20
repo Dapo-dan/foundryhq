@@ -13,6 +13,7 @@ The MVP scope — see `mvp.md` for the full checklist and definition of done:
 - Authentication (email/password, JWT + refresh tokens) — REQ-01
 - Workspace & Team (create workspace, invite members, switch workspace, Owner/Member roles) — REQ-02 (partial)
 - Task Management (Kanban board, CRUD tasks, assign users, status updates) — REQ-11
+- Mobile (React Native/Expo, scaffolded in `apps/mobile`) — ships Auth, Workspace/Team, and Tasks alongside web, not after; full parity for later modules deferred per REQ-NFR-05
 
 ## Next (v1.1 — after MVP ships)
 
