@@ -1,5 +1,10 @@
 {
   "name": "foundryhq",
   "private": true,
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "pnpm": {
+    "overrides": {
+      "hermes-parser": "0.36.1"
+    }
+  }
 }
