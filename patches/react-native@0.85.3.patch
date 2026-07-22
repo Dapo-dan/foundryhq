@@ -1,0 +1,243 @@
+diff --git a/src/private/components/virtualview/VirtualViewExperimentalNativeComponent.js b/src/private/components/virtualview/VirtualViewExperimentalNativeComponent.js
+index c640b5a0c5c10330968fd3304a42123d801a9b14..2afe383d5a36c8ec31a2f6810553faff4b51b70a 100644
+--- a/src/private/components/virtualview/VirtualViewExperimentalNativeComponent.js
++++ b/src/private/components/virtualview/VirtualViewExperimentalNativeComponent.js
+@@ -88,7 +88,6 @@ type VirtualViewExperimentalNativeProps = Readonly<{
+   /**
+    * See `NativeModeChangeEvent`.
+    */
+-  onModeChange?: ?DirectEventHandler<NativeModeChangeEvent>,
+ }>;
+ 
+ // TODO: Rename to eliminate "Experimental" suffix in the name.
+diff --git a/src/private/components/virtualview/VirtualViewNativeComponent.js b/src/private/components/virtualview/VirtualViewNativeComponent.js
+index 4ba5b68398edc8751055dc1d63b2ade7e8e2aea9..fec81ef5eee1a06b81a65906577e4b0ed4744316 100644
+--- a/src/private/components/virtualview/VirtualViewNativeComponent.js
++++ b/src/private/components/virtualview/VirtualViewNativeComponent.js
+@@ -19,44 +19,15 @@ import type {HostComponent} from '../../types/HostComponent';
+ import codegenNativeComponent from '../../../../Libraries/Utilities/codegenNativeComponent';
+ 
+ export type NativeModeChangeEvent = Readonly<{
+-  /**
+-   * Virtualization mode of the target view.
+-   *
+-   * - `0`: Target view is visible.
+-   * - `1`: Target view is hidden, but can be prerendered.
+-   * - `2`: Target view is hidden.
+-   *
+-   * WORKAROUND: As of this writing, codegen doesn't support enums, so we need
+-   * to convert `number` into an enum in `VirtualView`.
+-   */
+   mode: Int32,
+-
+-  /**
+-   * Rect of the target view, relative to the nearest ancestor scroll container.
+-   */
+-  targetRect: Readonly<{
+-    x: Double,
+-    y: Double,
+-    width: Double,
+-    height: Double,
+-  }>,
+-
+-  /**
+-   * Rect of the threshold that determines the mode of the target view, relative
+-   * to the nearest ancestor scroll container.
+-   *
+-   * - `Visible`: Rect in which the target view is visible.
+-   * - `Prerender`: Rect in which the target view is prerendered.
+-   * - `Hidden`: Unused, without any guarantees.
+-   *
+-   * This can be used to determine whether and how much new content to render.
+-   */
+-  thresholdRect: Readonly<{
+-    x: Double,
+-    y: Double,
+-    width: Double,
+-    height: Double,
+-  }>,
++  targetRectX: Double,
++  targetRectY: Double,
++  targetRectWidth: Double,
++  targetRectHeight: Double,
++  thresholdRectX: Double,
++  thresholdRectY: Double,
++  thresholdRectWidth: Double,
++  thresholdRectHeight: Double,
+ }>;
+ 
+ type VirtualViewNativeProps = Readonly<{
+@@ -88,7 +59,6 @@ type VirtualViewNativeProps = Readonly<{
+   /**
+    * See `NativeModeChangeEvent`.
+    */
+-  onModeChange?: ?DirectEventHandler<NativeModeChangeEvent>,
+ }>;
+ 
+ export default codegenNativeComponent<VirtualViewNativeProps>('VirtualView', {
+diff --git a/src/private/specs_DEPRECATED/components/AndroidDrawerLayoutNativeComponent.js b/src/private/specs_DEPRECATED/components/AndroidDrawerLayoutNativeComponent.js
+index 22ce1ab1872c850230a9204e77814acb16cf8418..04f15034d228a4fbd3a6395bcc28615b2fdb0507 100644
+--- a/src/private/specs_DEPRECATED/components/AndroidDrawerLayoutNativeComponent.js
++++ b/src/private/specs_DEPRECATED/components/AndroidDrawerLayoutNativeComponent.js
+@@ -76,30 +76,6 @@ type AndroidDrawerLayoutNativeProps = Readonly<{
+     'unlocked',
+   >,
+ 
+-  /**
+-   * Function called whenever there is an interaction with the navigation view.
+-   */
+-  onDrawerSlide?: ?DirectEventHandler<DrawerSlideEvent>,
+-
+-  /**
+-   * Function called when the drawer state has changed. The drawer can be in 3 states:
+-   * - Idle, meaning there is no interaction with the navigation view happening at the time
+-   * - Dragging, meaning there is currently an interaction with the navigation view
+-   * - Settling, meaning that there was an interaction with the navigation view, and the
+-   * navigation view is now finishing its closing or opening animation
+-   */
+-  onDrawerStateChanged?: ?DirectEventHandler<DrawerStateEvent>,
+-
+-  /**
+-   * Function called whenever the navigation view has been opened.
+-   */
+-  onDrawerOpen?: ?DirectEventHandler<null>,
+-
+-  /**
+-   * Function called whenever the navigation view has been closed.
+-   */
+-  onDrawerClose?: ?DirectEventHandler<null>,
+-
+   /**
+    * Make the drawer take the entire screen and draw the background of the
+    * status bar to allow it to open over the status bar. It will only have an
+diff --git a/src/private/specs_DEPRECATED/components/AndroidSwipeRefreshLayoutNativeComponent.js b/src/private/specs_DEPRECATED/components/AndroidSwipeRefreshLayoutNativeComponent.js
+index 35acd8319d6e0244d565fa30698e54b180ce5b0a..657e939d1818f0d5021129e1e17530c5cd80d807 100644
+--- a/src/private/specs_DEPRECATED/components/AndroidSwipeRefreshLayoutNativeComponent.js
++++ b/src/private/specs_DEPRECATED/components/AndroidSwipeRefreshLayoutNativeComponent.js
+@@ -31,7 +31,6 @@ type AndroidSwipeRefreshLayoutNativeProps = Readonly<{
+   /**
+    * The colors (at least one) that will be used to draw the refresh indicator.
+    */
+-  colors?: ?ReadonlyArray<ColorValue>,
+   /**
+    * The background color of the refresh indicator.
+    */
+@@ -45,10 +44,6 @@ type AndroidSwipeRefreshLayoutNativeProps = Readonly<{
+    */
+   progressViewOffset?: WithDefault<Float, 0>,
+ 
+-  /**
+-   * Called when the view starts refreshing.
+-   */
+-  onRefresh?: ?DirectEventHandler<null>,
+ 
+   /**
+    * Whether the view should be indicating an active refresh.
+diff --git a/src/private/specs_DEPRECATED/components/AndroidSwitchNativeComponent.js b/src/private/specs_DEPRECATED/components/AndroidSwitchNativeComponent.js
+index c91e734cf832717ee64aeeb1eb9f0406c1ff41ea..9bfe5889e0b3abac20acee3e8b1fb218bc514ef6 100644
+--- a/src/private/specs_DEPRECATED/components/AndroidSwitchNativeComponent.js
++++ b/src/private/specs_DEPRECATED/components/AndroidSwitchNativeComponent.js
+@@ -40,8 +40,6 @@ type AndroidSwitchNativeProps = Readonly<{
+   thumbTintColor?: ?ColorValue,
+   trackTintColor?: ?ColorValue,
+ 
+-  // Events
+-  onChange?: BubblingEventHandler<AndroidSwitchChangeEvent>,
+ }>;
+ 
+ type NativeType = HostComponent<AndroidSwitchNativeProps>;
+diff --git a/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js b/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js
+index e72d19befa59febf78d67c057a9450142c1ecb46..b360064092d4a7fc30206bbb758762554cde5d81 100644
+--- a/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js
++++ b/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js
+@@ -41,10 +41,6 @@ type PullToRefreshNativeProps = Readonly<{
+    */
+   progressViewOffset?: WithDefault<Float, 0>,
+ 
+-  /**
+-   * Called when the view starts refreshing.
+-   */
+-  onRefresh?: ?DirectEventHandler<null>,
+ 
+   /**
+    * Whether the view should be indicating an active refresh.
+diff --git a/src/private/specs_DEPRECATED/components/RCTModalHostViewNativeComponent.js b/src/private/specs_DEPRECATED/components/RCTModalHostViewNativeComponent.js
+index a27f5b3b3e4eb82d9fea2a15af45a0f26d38e987..45c7a435a3e689134d120b4c45d7e2ff58aaaab8 100644
+--- a/src/private/specs_DEPRECATED/components/RCTModalHostViewNativeComponent.js
++++ b/src/private/specs_DEPRECATED/components/RCTModalHostViewNativeComponent.js
+@@ -74,32 +74,6 @@ type RCTModalHostViewNativeProps = Readonly<{
+    */
+   hardwareAccelerated?: WithDefault<boolean, false>,
+ 
+-  /**
+-   * The `onRequestClose` callback is called when the user taps the hardware
+-   * back button on Android or the menu button on Apple TV.
+-   *
+-   * This is required on Apple TV and Android.
+-   *
+-   * See https://reactnative.dev/docs/modal#onrequestclose
+-   */
+-  onRequestClose?: ?DirectEventHandler<null>,
+-
+-  /**
+-   * The `onShow` prop allows passing a function that will be called once the
+-   * modal has been shown.
+-   *
+-   * See https://reactnative.dev/docs/modal#onshow
+-   */
+-  onShow?: ?DirectEventHandler<null>,
+-
+-  /**
+-   * The `onDismiss` prop allows passing a function that will be called once
+-   * the modal has been dismissed.
+-   *
+-   * See https://reactnative.dev/docs/modal#ondismiss
+-   */
+-  onDismiss?: ?DirectEventHandler<null>,
+-
+   /**
+    * The `visible` prop determines whether your modal is visible.
+    *
+@@ -118,29 +92,6 @@ type RCTModalHostViewNativeProps = Readonly<{
+    */
+   allowSwipeDismissal?: WithDefault<boolean, false>,
+ 
+-  /**
+-   * The `supportedOrientations` prop allows the modal to be rotated to any of the specified orientations.
+-   *
+-   * See https://reactnative.dev/docs/modal#supportedorientations
+-   */
+-  supportedOrientations?: WithDefault<
+-    ReadonlyArray<
+-      | 'portrait'
+-      | 'portrait-upside-down'
+-      | 'landscape'
+-      | 'landscape-left'
+-      | 'landscape-right',
+-    >,
+-    'portrait',
+-  >,
+-
+-  /**
+-   * The `onOrientationChange` callback is called when the orientation changes while the modal is being displayed.
+-   *
+-   * See https://reactnative.dev/docs/modal#onorientationchange
+-   */
+-  onOrientationChange?: ?DirectEventHandler<OrientationChangeEvent>,
+-
+   /**
+    * The `identifier` is the unique number for identifying Modal components.
+    */
+diff --git a/src/private/specs_DEPRECATED/components/SwitchNativeComponent.js b/src/private/specs_DEPRECATED/components/SwitchNativeComponent.js
+index 3d6feb97cb72a8a317bc11b4d690d9575d21f760..687d5f7521219a40c268807166656198bca8fd8d 100644
+--- a/src/private/specs_DEPRECATED/components/SwitchNativeComponent.js
++++ b/src/private/specs_DEPRECATED/components/SwitchNativeComponent.js
+@@ -41,8 +41,6 @@ type SwitchNativeProps = Readonly<{
+   trackColorForFalse?: ?ColorValue,
+   trackColorForTrue?: ?ColorValue,
+ 
+-  // Events
+-  onChange?: ?BubblingEventHandler<NativeSwitchChangeEvent>,
+ }>;
+ 
+ type ComponentType = HostComponent<SwitchNativeProps>;
