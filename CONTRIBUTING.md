@@ -161,11 +161,14 @@ go test -cover ./...             # With coverage
 
 ### Frontend
 
-Testing isn't set up yet — `apps/web` has no test runner, no Vitest/React Testing Library dependency, and no `test` script. The only frontend check today is:
+Testing isn't set up yet — neither `apps/web` nor `apps/mobile` has a test runner, no Vitest/React Testing Library dependency, and no `test` script. The only frontend checks today are lint and build:
 
 ```bash
-cd apps/web
-pnpm lint # oxlint
+pnpm --filter @foundryhq/web lint
+pnpm --filter @foundryhq/web build
+
+pnpm --filter @foundryhq/mobile lint
+pnpm --filter @foundryhq/mobile build
 ```
 
 This section will be updated with the runner, commands, and coverage expectations once frontend testing is added.

@@ -88,3 +88,27 @@ jobs:
 
       - name: Build
         run: pnpm --filter @foundryhq/web build
+
+  mobile:
+    name: Mobile (React Native)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter @foundryhq/mobile lint
+
+      - name: Build
+        run: pnpm --filter @foundryhq/mobile build
