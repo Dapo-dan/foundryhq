@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/form'
 import { PasswordInput } from '@/components/ui/password-input'
 import { useResetPassword } from '@/hooks/useResetPassword'
-import { resetPasswordSchema, type ResetPasswordFormValues } from '@/lib/validation/auth'
+import { resetPasswordSchema, type ResetPasswordFormValues } from '@foundryhq/shared-validation'
 import { PasswordStrengthBar } from './PasswordStrengthBar'
 
 export function ResetPasswordForm() {

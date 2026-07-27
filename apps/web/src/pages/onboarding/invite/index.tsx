@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { inviteEmailSchema } from '@/lib/validation/onboarding'
+import { inviteEmailSchema } from '@foundryhq/shared-validation'
 import { useOnboardingStore } from '@/store/slices/onboarding'
 import { InviteEmailField } from './components/InviteEmailField'
 

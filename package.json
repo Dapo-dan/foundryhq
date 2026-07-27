@@ -2,6 +2,9 @@
   "name": "foundryhq",
   "private": true,
   "version": "0.0.0",
+  "scripts": {
+    "postinstall": "node scripts/fix-types-react-hoist.mjs"
+  },
   "pnpm": {
     "patchedDependencies": {
       "react-native@0.85.3": "patches/react-native@0.85.3.patch"

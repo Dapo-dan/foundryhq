@@ -16,11 +16,6 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   'welcome',
 ]
 
-export interface Workspace {
-  id: string
-  name: string
-}
-
 export interface CreateWorkspaceInput {
   name: string
   teamSize: TeamSize

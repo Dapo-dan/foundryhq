@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { workspaceSchema, type WorkspaceFormValues } from '@/lib/validation/onboarding'
+import { workspaceSchema, type WorkspaceFormValues } from '@foundryhq/shared-validation'
 import { useOnboardingStore } from '@/store/slices/onboarding'
 
 export function WorkspaceForm() {

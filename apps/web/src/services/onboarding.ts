@@ -1,5 +1,6 @@
 import { apiPost } from '@/lib/api-client'
-import type { CreateWorkspaceInput, Workspace } from '@/types/onboarding'
+import type { Workspace } from '@foundryhq/shared-types'
+import type { CreateWorkspaceInput } from '@/types/onboarding'
 
 // NOTE: docs/api.md only documents GET/PATCH /workspaces/{id} — creation
 // isn't listed. Guessed as a standard REST POST to the collection; confirm

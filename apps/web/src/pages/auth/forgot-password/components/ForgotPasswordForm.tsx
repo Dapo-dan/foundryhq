@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useForgotPassword } from '@/hooks/useForgotPassword'
-import { forgotPasswordSchema, type ForgotPasswordFormValues } from '@/lib/validation/auth'
+import { forgotPasswordSchema, type ForgotPasswordFormValues } from '@foundryhq/shared-validation'
 
 export function ForgotPasswordForm() {
   const [sentTo, setSentTo] = useState<string | null>(null)

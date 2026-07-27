@@ -1,13 +1,3 @@
 packages:
   - "apps/*"
   - "packages/*"
-
-# lucide-react peer-depends on `react` but not `@types/react`, so pnpm has no
-# way to give web (react 18) and mobile (react 19) isolated type resolution —
-# it falls back to a single shared instance, which can silently pick either
-# version's @types/react for both apps. Declaring the missing peer here makes
-# pnpm suffix lucide-react per consumer, same as it already does for `react`.
-packageExtensions:
-  lucide-react:
-    peerDependencies:
-      "@types/react": "*"

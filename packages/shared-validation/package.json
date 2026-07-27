@@ -1,0 +1,13 @@
+{
+  "name": "@foundryhq/shared-validation",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}

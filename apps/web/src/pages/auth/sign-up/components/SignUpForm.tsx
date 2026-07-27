@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Separator } from '@/components/ui/separator'
 import { useSignUp } from '@/hooks/useSignUp'
-import { signUpSchema, type SignUpFormValues } from '@/lib/validation/auth'
+import { signUpSchema, type SignUpFormValues } from '@foundryhq/shared-validation'
 import { OAuthButtons } from '../../components/OAuthButtons'
 
 export function SignUpForm() {
