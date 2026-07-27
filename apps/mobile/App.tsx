@@ -1,35 +1,42 @@
 import './global.css';
 
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { NavigationContainer, type LinkingOptions } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { RootNavigator } from './src/navigation/RootNavigator';
+import type { AuthStackParamList } from './src/navigation/types';
+import { useAuthStore } from './src/store/slices/auth';
 
-import type { RootStackParamList } from './src/navigation/types';
-
-const Stack = createNativeStackNavigator<RootStackParamList>();
 const queryClient = new QueryClient();
 
-function HomeScreen() {
-  return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-text-primary">Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+const linking: LinkingOptions<AuthStackParamList> = {
+  prefixes: ['foundryhq://'],
+  config: {
+    screens: {
+      SignIn: 'sign-in',
+      SignUp: 'sign-up',
+      ForgotPassword: 'forgot-password',
+      ResetPassword: 'reset-password',
+    },
+  },
+};
 
 export default function App() {
+  const hydrate = useAuthStore((state) => state.hydrate);
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <NavigationContainer>
-          <Stack.Navigator>
-            <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'FoundryHQ' }} />
-          </Stack.Navigator>
+        <NavigationContainer linking={linking}>
+          <RootNavigator />
         </NavigationContainer>
+        <StatusBar style="auto" />
       </SafeAreaProvider>
     </QueryClientProvider>
   );

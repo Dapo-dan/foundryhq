@@ -3,6 +3,7 @@
     "name": "FoundryHQ",
     "slug": "foundryhq-mobile",
     "version": "0.0.0",
+    "scheme": "foundryhq",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
