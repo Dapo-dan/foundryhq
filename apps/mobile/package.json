@@ -21,6 +21,7 @@
     "@tanstack/react-query": "^5.101.2",
     "axios": "^1.18.1",
     "expo": "~56.0.16",
+    "expo-crypto": "~56.0.4",
     "expo-secure-store": "~56.0.4",
     "expo-status-bar": "~56.0.4",
     "nativewind": "^4.2.6",
