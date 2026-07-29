@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Text, TextInput, View, type TextInputProps } from 'react-native';
 
 export interface TextFieldProps extends TextInputProps {
-  label: string;
+  label?: string;
   error?: string;
   rightElement?: ReactNode;
 }
@@ -10,7 +10,7 @@ export interface TextFieldProps extends TextInputProps {
 export function TextField({ label, error, rightElement, ...inputProps }: TextFieldProps) {
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-text-primary">{label}</Text>
+      {label ? <Text className="text-sm font-medium text-text-primary">{label}</Text> : null}
       <View className="relative">
         <TextInput
           className={`h-11 rounded-lg border px-3 text-base text-text-primary ${
