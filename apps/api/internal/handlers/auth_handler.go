@@ -16,10 +16,10 @@ const refreshTokenCookieName = "refresh_token"
 // need it, rather than sending it on every request to the API.
 const refreshTokenCookiePath = "/auth"
 
-// AuthHandler serves POST /auth/register, /auth/login, /auth/refresh, and
-// /auth/logout (see docs/api.md). These routes must not have
-// middleware.Auth applied — they're how a caller obtains a session in the
-// first place.
+// AuthHandler serves POST /auth/register, /auth/login, /auth/refresh,
+// /auth/logout, /auth/forgot-password, and /auth/reset-password (see
+// docs/api.md). These routes must not have middleware.Auth applied —
+// they're how a caller obtains or recovers a session in the first place.
 type AuthHandler struct {
 	authUsecase   *usecases.AuthUsecase
 	secureCookies bool
@@ -39,6 +39,19 @@ type registerRequest struct {
 
 type loginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+type forgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// resetPasswordRequest's Password field is tagged "password", not
+// "newPassword" — it must match
+// packages/shared-types/src/auth.ts's ResetPasswordInput, which the
+// already-built reset-password screen sends against.
+type resetPasswordRequest struct {
+	Token    string `json:"token" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
@@ -135,6 +148,40 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	h.clearRefreshCookie(c)
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{}})
+}
+
+// ForgotPassword handles POST /auth/forgot-password. It always responds
+// 200, whether or not the email is registered — see
+// AuthUsecase.ForgotPassword.
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req forgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handleError(c, apperrors.Validation("", err.Error()))
+		return
+	}
+
+	if err := h.authUsecase.ForgotPassword(c.Request.Context(), req.Email); err != nil {
+		handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{}})
+}
+
+// ResetPassword handles POST /auth/reset-password.
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req resetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handleError(c, apperrors.Validation("", err.Error()))
+		return
+	}
+
+	if err := h.authUsecase.ResetPassword(c.Request.Context(), req.Token, req.Password); err != nil {
+		handleError(c, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{}})
 }
 

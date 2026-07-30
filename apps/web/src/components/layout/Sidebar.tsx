@@ -9,10 +9,13 @@ import {
   ChartBar,
   FileText,
   Settings,
+  LogOut,
 } from 'lucide-react'
 import { Logo } from '@/components/layout/Logo'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { useLogout } from '@/hooks/useLogout'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/slices/auth'
 
 const NAV_SECTIONS = [
   {
@@ -39,7 +42,17 @@ const NAV_SECTIONS = [
   },
 ]
 
+// User has no name field (see @foundryhq/shared-types) — derive a
+// display name from the local part of the email instead.
+function displayNameFromEmail(email: string) {
+  return email.split('@')[0]
+}
+
 export function Sidebar() {
+  const user = useAuthStore((state) => state.user)
+  const logout = useLogout()
+  const displayName = user ? displayNameFromEmail(user.email) : ''
+
   return (
     <aside className="flex h-svh w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-[60px] shrink-0 items-center border-b border-sidebar-border px-5">
@@ -92,15 +105,25 @@ export function Sidebar() {
 
       <div className="flex shrink-0 items-center gap-2.5 border-t border-sidebar-border px-4 py-4">
         <Avatar>
-          <AvatarFallback className="bg-brand text-white">JL</AvatarFallback>
+          <AvatarFallback className="bg-brand text-white">
+            {displayName.slice(0, 2).toUpperCase()}
+          </AvatarFallback>
         </Avatar>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-xs font-semibold text-foreground">Jordan Lee</span>
-          <span className="truncate text-[11px] text-muted-foreground">jordan@foundryhq.com</span>
+          <span className="truncate text-xs font-semibold text-foreground">{displayName}</span>
+          <span className="truncate text-[11px] text-muted-foreground">{user?.email}</span>
         </div>
         <NavLink to="/settings" aria-label="Settings">
           <Settings size={14} className="text-muted-foreground" />
         </NavLink>
+        <button
+          type="button"
+          onClick={() => logout.mutate()}
+          disabled={logout.isPending}
+          aria-label="Log out"
+        >
+          <LogOut size={14} className="text-muted-foreground" />
+        </button>
       </div>
     </aside>
   )

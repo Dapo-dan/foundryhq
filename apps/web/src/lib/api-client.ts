@@ -1,4 +1,5 @@
-import axios, { AxiosError } from 'axios'
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import type { AuthSession } from '@foundryhq/shared-types'
 import { useAuthStore } from '@/store/slices/auth'
 
 export interface ApiError {
@@ -15,6 +16,10 @@ interface ApiErrorEnvelope {
   error: ApiError
 }
 
+// Marks a request that's already gone through one 401-retry attempt, so the
+// interceptor below never retries the same request twice.
+type RetriableRequestConfig = InternalAxiosRequestConfig & { _retriedAfterRefresh?: boolean }
+
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
   // Refresh token is an httpOnly cookie (ADR-0004) — the browser needs to
@@ -30,15 +35,54 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
+// Shared across concurrent 401s so a burst of requests triggers one
+// /auth/refresh call, not one per request.
+let refreshPromise: Promise<AuthSession> | null = null
+
+function refreshAccessToken(): Promise<AuthSession> {
+  refreshPromise ??= apiClient
+    .post('/auth/refresh')
+    .then((response) => response as unknown as AuthSession)
+    .finally(() => {
+      refreshPromise = null
+    })
+  return refreshPromise
+}
+
 apiClient.interceptors.response.use(
   // Cast needed: axios types this handler as returning `AxiosResponse`, but
   // we deliberately unwrap to the inner payload here (see note below).
   (response) => (response.data as ApiEnvelope<unknown>).data as unknown as typeof response,
-  (error: AxiosError<ApiErrorEnvelope>) => {
+  async (error: AxiosError<ApiErrorEnvelope>) => {
+    const originalRequest = error.config as RetriableRequestConfig | undefined
+    const isAuthEndpoint = originalRequest?.url?.startsWith('/auth/')
     const apiError: ApiError = error.response?.data?.error ?? {
       code: 'network_error',
       message: error.message,
     }
+
+    // On an expired access token, attempt one silent refresh (via the
+    // httpOnly refresh-token cookie) and retry the original request exactly
+    // once. /auth/* requests are excluded — a 401 there is a real
+    // credential/session failure, not an expired access token to recover
+    // from.
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retriedAfterRefresh &&
+      !isAuthEndpoint
+    ) {
+      originalRequest._retriedAfterRefresh = true
+      try {
+        const session = await refreshAccessToken()
+        useAuthStore.getState().setSession(session)
+        return apiClient(originalRequest)
+      } catch {
+        useAuthStore.getState().clearSession()
+        window.location.href = '/auth/sign-in'
+      }
+    }
+
     return Promise.reject(apiError)
   }
 )

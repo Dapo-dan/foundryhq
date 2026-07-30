@@ -33,4 +33,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *User) error
 	GetByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetByEmail(ctx context.Context, email string) (*User, error)
+	// UpdatePassword replaces the stored password hash for userID, used by
+	// AuthUsecase.ResetPassword.
+	UpdatePassword(ctx context.Context, userID uuid.UUID, passwordHash string) error
 }

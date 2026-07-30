@@ -36,4 +36,8 @@ type RefreshTokenRepository interface {
 	Create(ctx context.Context, token *RefreshToken) error
 	GetByTokenHash(ctx context.Context, tokenHash string) (*RefreshToken, error)
 	Revoke(ctx context.Context, tokenHash string) error
+	// RevokeAllForUser revokes every not-yet-revoked token belonging to
+	// userID, used by AuthUsecase.ResetPassword to force re-login
+	// everywhere once a password may have been compromised.
+	RevokeAllForUser(ctx context.Context, userID uuid.UUID) error
 }

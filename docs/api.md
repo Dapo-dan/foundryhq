@@ -38,6 +38,8 @@ Human-curated overview of FoundryHQ's REST API. This is the index — the genera
 | POST | `/auth/oauth/{provider}` | OAuth login (`google`, `github`) |
 | POST | `/auth/refresh` | Exchange refresh token for a new access token |
 | POST | `/auth/logout` | Invalidate the current refresh token |
+| POST | `/auth/forgot-password` | Request a password-reset email (always 200) |
+| POST | `/auth/reset-password` | Reset password with a token from that email |
 
 ### Workspaces & Team
 | Method | Path | Description |

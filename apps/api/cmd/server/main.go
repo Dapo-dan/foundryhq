@@ -23,6 +23,7 @@ import (
 	"github.com/foundryhq/foundryhq/apps/api/pkg/database"
 	"github.com/foundryhq/foundryhq/apps/api/pkg/jwt"
 	"github.com/foundryhq/foundryhq/apps/api/pkg/logger"
+	"github.com/foundryhq/foundryhq/apps/api/pkg/mailer"
 )
 
 // shutdownTimeout bounds how long graceful shutdown waits for in-flight
@@ -84,10 +85,14 @@ func main() {
 	router.GET("/version", healthHandler.Version)
 
 	jwtManager := jwt.NewManager(cfg.JWTAccessSecret, cfg.JWTRefreshSecret, cfg.JWTAccessExpiry, cfg.JWTRefreshExpiry)
+	emailSender := mailer.NewResendSender(cfg.ResendAPIKey, cfg.EmailFromAddress)
 	authUsecase := usecases.NewAuthUsecase(
 		postgres.NewUserRepository(db),
 		postgres.NewRefreshTokenRepository(db),
+		postgres.NewPasswordResetTokenRepository(db),
 		jwtManager,
+		emailSender,
+		cfg.PasswordResetURLBase,
 	)
 	// secureCookies (the refresh-token cookie's Secure flag) must be false
 	// for local HTTP dev — browsers refuse Secure cookies over plain HTTP —
@@ -104,6 +109,8 @@ func main() {
 	router.POST("/auth/login", loginRateLimiter.Limit(), authHandler.Login)
 	router.POST("/auth/refresh", authHandler.Refresh)
 	router.POST("/auth/logout", authHandler.Logout)
+	router.POST("/auth/forgot-password", authHandler.ForgotPassword)
+	router.POST("/auth/reset-password", authHandler.ResetPassword)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,

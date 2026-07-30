@@ -5,6 +5,7 @@ package usecases
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -17,6 +18,7 @@ import (
 	"github.com/foundryhq/foundryhq/apps/api/internal/apperrors"
 	"github.com/foundryhq/foundryhq/apps/api/internal/domain"
 	"github.com/foundryhq/foundryhq/apps/api/pkg/jwt"
+	"github.com/foundryhq/foundryhq/apps/api/pkg/mailer"
 )
 
 // invalidCredentialsMessage is used for both "no such email" and "wrong
@@ -24,7 +26,16 @@ import (
 // emails.
 const invalidCredentialsMessage = "invalid email or password"
 
+// invalidResetTokenMessage is used for both "no such token" and "expired or
+// already-used token" so a reset attempt can't be used to distinguish the
+// two.
+const invalidResetTokenMessage = "invalid or expired reset token"
+
 const minPasswordLength = 8
+
+// passwordResetTokenExpiry bounds how long an emailed reset link stays
+// usable, short enough to limit exposure if the email is intercepted.
+const passwordResetTokenExpiry = 1 * time.Hour
 
 // AuthResult is returned by every AuthUsecase method that issues a session.
 // RefreshToken/RefreshExpiresAt are exposed so the handler can set the
@@ -37,19 +48,35 @@ type AuthResult struct {
 	RefreshExpiresAt time.Time
 }
 
-// AuthUsecase implements registration, login, refresh, and logout.
+// AuthUsecase implements registration, login, refresh, logout, and password
+// reset.
 type AuthUsecase struct {
-	userRepo         domain.UserRepository
-	refreshTokenRepo domain.RefreshTokenRepository
-	jwtManager       *jwt.Manager
+	userRepo               domain.UserRepository
+	refreshTokenRepo       domain.RefreshTokenRepository
+	passwordResetTokenRepo domain.PasswordResetTokenRepository
+	jwtManager             *jwt.Manager
+	mailer                 mailer.EmailSender
+	passwordResetURLBase   string
 }
 
-// NewAuthUsecase constructs an AuthUsecase.
-func NewAuthUsecase(userRepo domain.UserRepository, refreshTokenRepo domain.RefreshTokenRepository, jwtManager *jwt.Manager) *AuthUsecase {
+// NewAuthUsecase constructs an AuthUsecase. passwordResetURLBase is the web
+// app URL prefix used to build the emailed reset link (see
+// config.PasswordResetURLBase).
+func NewAuthUsecase(
+	userRepo domain.UserRepository,
+	refreshTokenRepo domain.RefreshTokenRepository,
+	passwordResetTokenRepo domain.PasswordResetTokenRepository,
+	jwtManager *jwt.Manager,
+	emailSender mailer.EmailSender,
+	passwordResetURLBase string,
+) *AuthUsecase {
 	return &AuthUsecase{
-		userRepo:         userRepo,
-		refreshTokenRepo: refreshTokenRepo,
-		jwtManager:       jwtManager,
+		userRepo:               userRepo,
+		refreshTokenRepo:       refreshTokenRepo,
+		passwordResetTokenRepo: passwordResetTokenRepo,
+		jwtManager:             jwtManager,
+		mailer:                 emailSender,
+		passwordResetURLBase:   passwordResetURLBase,
 	}
 }
 
@@ -140,6 +167,84 @@ func (u *AuthUsecase) Logout(ctx context.Context, refreshToken string) error {
 	return nil
 }
 
+// ForgotPassword always succeeds, whether or not email is registered — same
+// enumeration-safety principle as invalidCredentialsMessage. If the email
+// matches a user, it generates a reset token, persists a hash of it, and
+// emails the raw token as a link the user can follow to ResetPassword.
+func (u *AuthUsecase) ForgotPassword(ctx context.Context, email string) error {
+	user, err := u.userRepo.GetByEmail(ctx, normalizeEmail(email))
+	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return nil
+		}
+		return apperrors.Internal(fmt.Errorf("getting user: %w", err))
+	}
+
+	rawToken, err := generateResetToken()
+	if err != nil {
+		return apperrors.Internal(fmt.Errorf("generating password reset token: %w", err))
+	}
+
+	if err := u.passwordResetTokenRepo.Create(ctx, &domain.PasswordResetToken{
+		UserID:    user.ID,
+		TokenHash: hashToken(rawToken),
+		ExpiresAt: time.Now().Add(passwordResetTokenExpiry),
+	}); err != nil {
+		return apperrors.Internal(fmt.Errorf("persisting password reset token: %w", err))
+	}
+
+	resetLink := fmt.Sprintf("%s/auth/reset-password?token=%s", u.passwordResetURLBase, rawToken)
+	body := fmt.Sprintf(
+		`<p>Click the link below to reset your FoundryHQ password. This link expires in %s.</p><p><a href="%s">%s</a></p>`,
+		passwordResetTokenExpiry, resetLink, resetLink,
+	)
+	if err := u.mailer.Send(ctx, user.Email, "Reset your FoundryHQ password", body); err != nil {
+		return apperrors.Internal(fmt.Errorf("sending password reset email: %w", err))
+	}
+
+	return nil
+}
+
+// ResetPassword validates token, sets newPassword as the account's new
+// password, marks the token used so it can't be replayed, and revokes every
+// existing refresh token for the account — forcing re-login everywhere on
+// the assumption the old password may have been compromised.
+func (u *AuthUsecase) ResetPassword(ctx context.Context, token, newPassword string) error {
+	if len(newPassword) < minPasswordLength {
+		return apperrors.Validation("password", fmt.Sprintf("password must be at least %d characters", minPasswordLength))
+	}
+
+	stored, err := u.passwordResetTokenRepo.GetByTokenHash(ctx, hashToken(token))
+	if err != nil {
+		if errors.Is(err, domain.ErrPasswordResetTokenNotFound) {
+			return apperrors.Unauthorized(invalidResetTokenMessage)
+		}
+		return apperrors.Internal(fmt.Errorf("getting password reset token: %w", err))
+	}
+	if !stored.IsValid() {
+		return apperrors.Unauthorized(invalidResetTokenMessage)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return apperrors.Internal(fmt.Errorf("hashing password: %w", err))
+	}
+
+	if err := u.userRepo.UpdatePassword(ctx, stored.UserID, string(hash)); err != nil {
+		return apperrors.Internal(fmt.Errorf("updating password: %w", err))
+	}
+
+	if err := u.passwordResetTokenRepo.MarkUsed(ctx, stored.TokenHash); err != nil {
+		return apperrors.Internal(fmt.Errorf("marking password reset token used: %w", err))
+	}
+
+	if err := u.refreshTokenRepo.RevokeAllForUser(ctx, stored.UserID); err != nil {
+		return apperrors.Internal(fmt.Errorf("revoking refresh tokens: %w", err))
+	}
+
+	return nil
+}
+
 // issueSession generates a fresh access/refresh token pair for user and
 // persists a hash of the refresh token so a later Logout/Refresh can find
 // (and Logout can invalidate) it.
@@ -180,4 +285,15 @@ func normalizeEmail(email string) string {
 func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
+}
+
+// generateResetToken returns a random, URL-safe password-reset token. Only
+// its hash (see hashToken) is ever persisted; the raw value is emailed
+// directly to the user and never stored.
+func generateResetToken() (string, error) {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return "", fmt.Errorf("reading random bytes: %w", err)
+	}
+	return hex.EncodeToString(raw), nil
 }

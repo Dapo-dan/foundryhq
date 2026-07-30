@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,6 +58,15 @@ func (r *fakeUserRepo) GetByEmail(_ context.Context, email string) (*domain.User
 	return u, nil
 }
 
+func (r *fakeUserRepo) UpdatePassword(_ context.Context, userID uuid.UUID, passwordHash string) error {
+	u, ok := r.byID[userID]
+	if !ok {
+		return domain.ErrUserNotFound
+	}
+	u.PasswordHash = passwordHash
+	return nil
+}
+
 type fakeRefreshTokenRepo struct {
 	byHash map[string]*domain.RefreshToken
 }
@@ -87,10 +97,79 @@ func (r *fakeRefreshTokenRepo) Revoke(_ context.Context, tokenHash string) error
 	return nil
 }
 
+func (r *fakeRefreshTokenRepo) RevokeAllForUser(_ context.Context, userID uuid.UUID) error {
+	now := time.Now()
+	for _, t := range r.byHash {
+		if t.UserID == userID && t.RevokedAt == nil {
+			t.RevokedAt = &now
+		}
+	}
+	return nil
+}
+
+type fakePasswordResetTokenRepo struct {
+	byHash map[string]*domain.PasswordResetToken
+}
+
+func newFakePasswordResetTokenRepo() *fakePasswordResetTokenRepo {
+	return &fakePasswordResetTokenRepo{byHash: map[string]*domain.PasswordResetToken{}}
+}
+
+func (r *fakePasswordResetTokenRepo) Create(_ context.Context, token *domain.PasswordResetToken) error {
+	token.ID = uuid.New()
+	r.byHash[token.TokenHash] = token
+	return nil
+}
+
+func (r *fakePasswordResetTokenRepo) GetByTokenHash(_ context.Context, tokenHash string) (*domain.PasswordResetToken, error) {
+	t, ok := r.byHash[tokenHash]
+	if !ok {
+		return nil, domain.ErrPasswordResetTokenNotFound
+	}
+	return t, nil
+}
+
+func (r *fakePasswordResetTokenRepo) MarkUsed(_ context.Context, tokenHash string) error {
+	if t, ok := r.byHash[tokenHash]; ok {
+		now := time.Now()
+		t.UsedAt = &now
+	}
+	return nil
+}
+
+// fakeMailer is a mailer.EmailSender double that records every send so
+// tests can pull the emailed reset token out of it instead of hitting a
+// real provider.
+type fakeMailer struct {
+	sent []fakeSentEmail
+}
+
+type fakeSentEmail struct {
+	to, subject, body string
+}
+
+func (m *fakeMailer) Send(_ context.Context, to, subject, body string) error {
+	m.sent = append(m.sent, fakeSentEmail{to: to, subject: subject, body: body})
+	return nil
+}
+
 func newTestAuthHandler() *AuthHandler {
+	h, _ := newTestAuthHandlerWithMailer()
+	return h
+}
+
+func newTestAuthHandlerWithMailer() (*AuthHandler, *fakeMailer) {
 	manager := jwt.NewManager("access-secret", "refresh-secret", 15*time.Minute, 168*time.Hour)
-	authUsecase := usecases.NewAuthUsecase(newFakeUserRepo(), newFakeRefreshTokenRepo(), manager)
-	return NewAuthHandler(authUsecase, false)
+	mailer := &fakeMailer{}
+	authUsecase := usecases.NewAuthUsecase(
+		newFakeUserRepo(),
+		newFakeRefreshTokenRepo(),
+		newFakePasswordResetTokenRepo(),
+		manager,
+		mailer,
+		"http://localhost:5173",
+	)
+	return NewAuthHandler(authUsecase, false), mailer
 }
 
 func newAuthTestRouter(h *AuthHandler) *gin.Engine {
@@ -99,6 +178,8 @@ func newAuthTestRouter(h *AuthHandler) *gin.Engine {
 	router.POST("/auth/login", h.Login)
 	router.POST("/auth/refresh", h.Refresh)
 	router.POST("/auth/logout", h.Logout)
+	router.POST("/auth/forgot-password", h.ForgotPassword)
+	router.POST("/auth/reset-password", h.ResetPassword)
 	return router
 }
 
@@ -251,4 +332,94 @@ func TestAuthHandler_Refresh_MissingCookie(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusUnauthorized)
 	}
+}
+
+func TestAuthHandler_ForgotPassword_AlwaysOK(t *testing.T) {
+	h, mailer := newTestAuthHandlerWithMailer()
+	router := newAuthTestRouter(h)
+
+	doJSONRequest(router, http.MethodPost, "/auth/register", map[string]string{
+		"email":    "user@example.com",
+		"password": "password123",
+	})
+
+	registered := doJSONRequest(router, http.MethodPost, "/auth/forgot-password", map[string]string{
+		"email": "user@example.com",
+	})
+	if registered.Code != http.StatusOK {
+		t.Fatalf("registered-email status = %d, want %d, body = %s", registered.Code, http.StatusOK, registered.Body.String())
+	}
+
+	unregistered := doJSONRequest(router, http.MethodPost, "/auth/forgot-password", map[string]string{
+		"email": "nobody@example.com",
+	})
+	if unregistered.Code != http.StatusOK {
+		t.Fatalf("unregistered-email status = %d, want %d (enumeration-safe)", unregistered.Code, http.StatusOK)
+	}
+
+	if len(mailer.sent) != 1 {
+		t.Fatalf("expected exactly 1 sent email, got %d", len(mailer.sent))
+	}
+}
+
+func TestAuthHandler_ResetPassword_Success(t *testing.T) {
+	h, mailer := newTestAuthHandlerWithMailer()
+	router := newAuthTestRouter(h)
+
+	doJSONRequest(router, http.MethodPost, "/auth/register", map[string]string{
+		"email":    "user@example.com",
+		"password": "password123",
+	})
+	doJSONRequest(router, http.MethodPost, "/auth/forgot-password", map[string]string{
+		"email": "user@example.com",
+	})
+	if len(mailer.sent) != 1 {
+		t.Fatalf("expected a reset email to have been sent, got %d", len(mailer.sent))
+	}
+	token := extractToken(t, mailer.sent[0].body)
+
+	w := doJSONRequest(router, http.MethodPost, "/auth/reset-password", map[string]string{
+		"token":    token,
+		"password": "new-password456",
+	})
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	loginW := doJSONRequest(router, http.MethodPost, "/auth/login", map[string]string{
+		"email":    "user@example.com",
+		"password": "new-password456",
+	})
+	if loginW.Code != http.StatusOK {
+		t.Errorf("login with new password status = %d, want %d", loginW.Code, http.StatusOK)
+	}
+}
+
+func TestAuthHandler_ResetPassword_InvalidToken(t *testing.T) {
+	router := newAuthTestRouter(newTestAuthHandler())
+
+	w := doJSONRequest(router, http.MethodPost, "/auth/reset-password", map[string]string{
+		"token":    "not-a-real-token",
+		"password": "new-password456",
+	})
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d, body = %s", w.Code, http.StatusUnauthorized, w.Body.String())
+	}
+}
+
+// extractToken pulls the raw reset token out of the query string of the
+// link embedded in a ForgotPassword email body.
+func extractToken(t *testing.T, body string) string {
+	t.Helper()
+	const marker = "token="
+	i := strings.Index(body, marker)
+	if i == -1 {
+		t.Fatalf("email body has no %q: %s", marker, body)
+	}
+	rest := body[i+len(marker):]
+	end := strings.IndexAny(rest, `"'&`)
+	if end == -1 {
+		end = len(rest)
+	}
+	return rest[:end]
 }

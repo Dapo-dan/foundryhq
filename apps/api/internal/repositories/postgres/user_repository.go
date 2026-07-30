@@ -99,3 +99,19 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	}
 	return model.toDomain(), nil
 }
+
+// UpdatePassword replaces the stored password hash for userID. Returns
+// domain.ErrUserNotFound if no such user exists.
+func (r *UserRepository) UpdatePassword(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	result := r.db.WithContext(ctx).
+		Model(&userModel{}).
+		Where("id = ?", userID).
+		Update("password_hash", passwordHash)
+	if result.Error != nil {
+		return fmt.Errorf("updating password for user %s: %w", userID, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrUserNotFound
+	}
+	return nil
+}

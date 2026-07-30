@@ -20,7 +20,7 @@ const ROLE_LABELS: Record<Role, string> = {
 
 export function WelcomeStepPage() {
   const navigate = useNavigate()
-  const { workspaceName, teamSize, role, invites, reset } = useOnboardingStore((state) => state)
+  const { workspaceName, teamSize, role, invites } = useOnboardingStore((state) => state)
 
   const checklist = [
     `"${workspaceName}" workspace created`,
@@ -33,13 +33,14 @@ export function WelcomeStepPage() {
   function onGoToDashboard() {
     // Mark completion before navigating so a future sign-in knows this
     // account already finished onboarding (see store's `onboardingComplete`).
+    // Deliberately don't clear `completedSteps` here: OnboardingLayout's
+    // step-guard reads it, and clearing it while that layout is still
+    // mounted (navigation to /dashboard hasn't committed yet) redirects the
+    // user back to the first onboarding step instead of the dashboard.
+    // `completedSteps` is dead data once `onboardingComplete` is true — sign-in
+    // only checks the latter — so there's nothing to reset on this path.
     useOnboardingStore.getState().markOnboardingComplete()
-    // Navigate first, then clear the wizard state on the next tick — resetting
-    // first re-renders OnboardingLayout (still mounted on this route) with an
-    // empty `completedSteps`, and its step-guard redirects back to the first
-    // step before the navigation to /dashboard has a chance to take effect.
     navigate('/dashboard')
-    setTimeout(reset, 0)
   }
 
   return (

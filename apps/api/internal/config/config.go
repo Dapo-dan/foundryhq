@@ -44,6 +44,17 @@ type Config struct {
 	// middleware.NewRateLimiter.
 	LoginRateLimitBurst  int
 	LoginRateLimitWindow time.Duration
+
+	// ResendAPIKey authenticates outgoing email via pkg/mailer.ResendSender.
+	// Ops-supplied, no default — same treatment as JWTAccessSecret.
+	ResendAPIKey string
+	// EmailFromAddress is the From address on outgoing email (e.g. password
+	// reset links).
+	EmailFromAddress string
+	// PasswordResetURLBase is the web app URL prefix used to build the link
+	// emailed by AuthUsecase.ForgotPassword, e.g.
+	// "{base}/auth/reset-password?token=...".
+	PasswordResetURLBase string
 }
 
 // Load reads configuration from a local .env file, falling back to real
@@ -129,5 +140,9 @@ func Load() (*Config, error) {
 
 		LoginRateLimitBurst:  v.GetInt("LOGIN_RATE_LIMIT_BURST"),
 		LoginRateLimitWindow: loginRateLimitWindow,
+
+		ResendAPIKey:         v.GetString("RESEND_API_KEY"),
+		EmailFromAddress:     v.GetString("EMAIL_FROM_ADDRESS"),
+		PasswordResetURLBase: v.GetString("PASSWORD_RESET_URL_BASE"),
 	}, nil
 }

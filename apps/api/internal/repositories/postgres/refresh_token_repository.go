@@ -92,3 +92,16 @@ func (r *RefreshTokenRepository) Revoke(ctx context.Context, tokenHash string) e
 	}
 	return nil
 }
+
+// RevokeAllForUser marks every not-yet-revoked token belonging to userID as
+// revoked. It's a no-op (not an error) if the user has no active tokens.
+func (r *RefreshTokenRepository) RevokeAllForUser(ctx context.Context, userID uuid.UUID) error {
+	err := r.db.WithContext(ctx).
+		Model(&refreshTokenModel{}).
+		Where("user_id = ? AND revoked_at IS NULL", userID).
+		Update("revoked_at", time.Now()).Error
+	if err != nil {
+		return fmt.Errorf("revoking all refresh tokens for user: %w", err)
+	}
+	return nil
+}

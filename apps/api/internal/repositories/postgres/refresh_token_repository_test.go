@@ -102,3 +102,53 @@ func TestRefreshTokenRepository_Revoke_NonexistentIsNoop(t *testing.T) {
 		}
 	})
 }
+
+func TestRefreshTokenRepository_RevokeAllForUser(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		user := mustCreateTestUser(t, tx)
+		otherUser := mustCreateTestUser(t, tx)
+		repo := NewRefreshTokenRepository(tx)
+		ctx := context.Background()
+
+		mine1 := &domain.RefreshToken{UserID: user.ID, TokenHash: "hash-" + uuid.NewString(), ExpiresAt: time.Now().Add(168 * time.Hour)}
+		mine2 := &domain.RefreshToken{UserID: user.ID, TokenHash: "hash-" + uuid.NewString(), ExpiresAt: time.Now().Add(168 * time.Hour)}
+		others := &domain.RefreshToken{UserID: otherUser.ID, TokenHash: "hash-" + uuid.NewString(), ExpiresAt: time.Now().Add(168 * time.Hour)}
+		for _, tok := range []*domain.RefreshToken{mine1, mine2, others} {
+			if err := repo.Create(ctx, tok); err != nil {
+				t.Fatalf("Create() error = %v", err)
+			}
+		}
+
+		if err := repo.RevokeAllForUser(ctx, user.ID); err != nil {
+			t.Fatalf("RevokeAllForUser() error = %v", err)
+		}
+
+		for _, tok := range []*domain.RefreshToken{mine1, mine2} {
+			got, err := repo.GetByTokenHash(ctx, tok.TokenHash)
+			if err != nil {
+				t.Fatalf("GetByTokenHash() error = %v", err)
+			}
+			if got.IsValid() {
+				t.Errorf("token %s should be revoked", tok.TokenHash)
+			}
+		}
+
+		got, err := repo.GetByTokenHash(ctx, others.TokenHash)
+		if err != nil {
+			t.Fatalf("GetByTokenHash() error = %v", err)
+		}
+		if !got.IsValid() {
+			t.Error("other user's token should not be revoked")
+		}
+	})
+}
+
+func TestRefreshTokenRepository_RevokeAllForUser_NoTokensIsNoop(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		repo := NewRefreshTokenRepository(tx)
+
+		if err := repo.RevokeAllForUser(context.Background(), uuid.New()); err != nil {
+			t.Errorf("RevokeAllForUser() on a user with no tokens error = %v, want nil", err)
+		}
+	})
+}

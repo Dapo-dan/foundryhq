@@ -100,3 +100,38 @@ func TestUserRepository_GetByEmail_NotFound(t *testing.T) {
 		}
 	})
 }
+
+func TestUserRepository_UpdatePassword(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		repo := NewUserRepository(tx)
+		ctx := context.Background()
+
+		user := newTestUser()
+		if err := repo.Create(ctx, user); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		if err := repo.UpdatePassword(ctx, user.ID, "new-hashed-password"); err != nil {
+			t.Fatalf("UpdatePassword() error = %v", err)
+		}
+
+		got, err := repo.GetByID(ctx, user.ID)
+		if err != nil {
+			t.Fatalf("GetByID() error = %v", err)
+		}
+		if got.PasswordHash != "new-hashed-password" {
+			t.Errorf("PasswordHash = %q, want %q", got.PasswordHash, "new-hashed-password")
+		}
+	})
+}
+
+func TestUserRepository_UpdatePassword_NotFound(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		repo := NewUserRepository(tx)
+
+		err := repo.UpdatePassword(context.Background(), uuid.New(), "new-hashed-password")
+		if !errors.Is(err, domain.ErrUserNotFound) {
+			t.Errorf("UpdatePassword() error = %v, want %v", err, domain.ErrUserNotFound)
+		}
+	})
+}
