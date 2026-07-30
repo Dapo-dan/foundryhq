@@ -146,6 +146,34 @@ index c91e734cf832717ee64aeeb1eb9f0406c1ff41ea..9bfe5889e0b3abac20acee3e8b1fb218
  }>;
  
  type NativeType = HostComponent<AndroidSwitchNativeProps>;
+diff --git a/src/private/specs_DEPRECATED/components/DebuggingOverlayNativeComponent.js b/src/private/specs_DEPRECATED/components/DebuggingOverlayNativeComponent.js
+index 178951bf2b4d85e2262da07ae6b41ef73a9338de..28e078c7fcc04958402505d990742b922a234295 100644
+--- a/src/private/specs_DEPRECATED/components/DebuggingOverlayNativeComponent.js
++++ b/src/private/specs_DEPRECATED/components/DebuggingOverlayNativeComponent.js
+@@ -36,14 +36,6 @@ export type ElementRectangle = {
+ };
+ 
+ interface NativeCommands {
+-  +highlightTraceUpdates: (
+-    viewRef: React.ElementRef<DebuggingOverlayNativeComponentType>,
+-    updates: ReadonlyArray<TraceUpdate>,
+-  ) => void;
+-  +highlightElements: (
+-    viewRef: React.ElementRef<DebuggingOverlayNativeComponentType>,
+-    elements: ReadonlyArray<ElementRectangle>,
+-  ) => void;
+   +clearElementsHighlights: (
+     viewRef: React.ElementRef<DebuggingOverlayNativeComponentType>,
+   ) => void;
+@@ -51,8 +43,6 @@ interface NativeCommands {
+ 
+ export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
+   supportedCommands: [
+-    'highlightTraceUpdates',
+-    'highlightElements',
+     'clearElementsHighlights',
+   ],
+ });
 diff --git a/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js b/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js
 index e72d19befa59febf78d67c057a9450142c1ecb46..b360064092d4a7fc30206bbb758762554cde5d81 100644
 --- a/src/private/specs_DEPRECATED/components/PullToRefreshViewNativeComponent.js
