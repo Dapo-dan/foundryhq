@@ -3,6 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { workspaceSchema } from '@foundryhq/shared-validation';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { StepProgressBar } from '../../components/StepProgressBar';
 import { TextField } from '../../components/TextField';
@@ -35,28 +36,32 @@ export function WorkspaceScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerClassName="flex-1 justify-center px-6 py-12">
-      <View className="w-full max-w-[440px] gap-6 self-center">
-        <StepProgressBar currentStep={1} totalSteps={2} />
-        <View className="gap-1">
-          <Text className="text-center text-2xl font-bold text-text-primary">
-            Name your workspace
-          </Text>
-          <Text className="text-center text-sm text-text-secondary">
-            You can always change this later.
-          </Text>
+    // No separate header component on this screen (unlike auth screens'
+    // AuthHeader) — this SafeAreaView needs both edges.
+    <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-white">
+      <ScrollView className="flex-1" contentContainerClassName="flex-1 justify-center px-6 py-12">
+        <View className="w-full max-w-[440px] gap-6 self-center">
+          <StepProgressBar currentStep={1} totalSteps={2} />
+          <View className="gap-1">
+            <Text className="text-center text-2xl font-bold text-text-primary">
+              Name your workspace
+            </Text>
+            <Text className="text-center text-sm text-text-secondary">
+              You can always change this later.
+            </Text>
+          </View>
+          <View className="gap-3">
+            <TextField
+              placeholder="e.g. Acme Inc."
+              autoFocus
+              value={name}
+              onChangeText={setName}
+              error={error}
+            />
+            <PrimaryButton label="Continue" onPress={onSubmit} />
+          </View>
         </View>
-        <View className="gap-3">
-          <TextField
-            placeholder="e.g. Acme Inc."
-            autoFocus
-            value={name}
-            onChangeText={setName}
-            error={error}
-          />
-          <PrimaryButton label="Continue" onPress={onSubmit} />
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

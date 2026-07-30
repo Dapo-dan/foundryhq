@@ -1,6 +1,7 @@
 import { inviteEmailSchema } from '@foundryhq/shared-validation';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { StepProgressBar } from '../../components/StepProgressBar';
 import { TextField } from '../../components/TextField';
@@ -56,41 +57,45 @@ export function InviteScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerClassName="flex-1 justify-center px-6 py-12">
-      <View className="w-full max-w-[440px] gap-6 self-center">
-        <StepProgressBar currentStep={2} totalSteps={2} />
-        <View className="gap-1">
-          <Text className="text-center text-2xl font-bold text-text-primary">
-            Invite your team
-          </Text>
-          <Text className="text-center text-sm text-text-secondary">
-            Work is better together — invite a few teammates to get started.
-          </Text>
+    // No separate header component on this screen (unlike auth screens'
+    // AuthHeader) — this SafeAreaView needs both edges.
+    <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-white">
+      <ScrollView className="flex-1" contentContainerClassName="flex-1 justify-center px-6 py-12">
+        <View className="w-full max-w-[440px] gap-6 self-center">
+          <StepProgressBar currentStep={2} totalSteps={2} />
+          <View className="gap-1">
+            <Text className="text-center text-2xl font-bold text-text-primary">
+              Invite your team
+            </Text>
+            <Text className="text-center text-sm text-text-secondary">
+              Work is better together — invite a few teammates to get started.
+            </Text>
+          </View>
+          <View className="gap-3">
+            {emails.map((email, i) => (
+              <TextField
+                key={i}
+                placeholder="teammate@company.com"
+                autoComplete="off"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={(value) => updateEmail(i, value)}
+                error={errors[i]}
+              />
+            ))}
+            <Pressable onPress={addAnother} className="self-start">
+              <Text className="text-sm text-brand">+ Add another</Text>
+            </Pressable>
+          </View>
+          <View className="gap-3">
+            <PrimaryButton label="Send invite" onPress={onSendInvite} />
+            <Pressable onPress={onSkip}>
+              <Text className="text-center text-sm text-text-secondary">Skip for now</Text>
+            </Pressable>
+          </View>
         </View>
-        <View className="gap-3">
-          {emails.map((email, i) => (
-            <TextField
-              key={i}
-              placeholder="teammate@company.com"
-              autoComplete="off"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={(value) => updateEmail(i, value)}
-              error={errors[i]}
-            />
-          ))}
-          <Pressable onPress={addAnother} className="self-start">
-            <Text className="text-sm text-brand">+ Add another</Text>
-          </Pressable>
-        </View>
-        <View className="gap-3">
-          <PrimaryButton label="Send invite" onPress={onSendInvite} />
-          <Pressable onPress={onSkip}>
-            <Text className="text-center text-sm text-text-secondary">Skip for now</Text>
-          </Pressable>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

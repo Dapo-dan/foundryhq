@@ -3,6 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { resetPasswordSchema } from '@foundryhq/shared-validation';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthCard } from '../../components/AuthCard';
 import { AuthHeader } from '../../components/AuthHeader';
 import { PasswordField } from '../../components/PasswordField';
@@ -40,50 +41,52 @@ export function ResetPasswordScreen({ route }: Props) {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white">
-      <AuthHeader navLabel="← Back to sign in" onNavPress={() => navigation.navigate('SignIn')} />
-      <View className="flex-1 items-center justify-center px-6 py-12">
-        <View className="w-full max-w-[440px]">
-          <AuthCard
-            heading="Set a new password"
-            description="Choose a new password for your account."
-          >
-            <View className="gap-3">
-              <View className="gap-1.5">
+    // AuthHeader handles the top safe-area edge itself — only bottom is left
+    // to this SafeAreaView, otherwise the two would double up on top padding.
+    <SafeAreaView edges={['bottom']} className="flex-1 bg-white">
+      <ScrollView className="flex-1">
+        <AuthHeader navLabel="← Back to sign in" onNavPress={() => navigation.navigate('SignIn')} />
+        <View className="flex-1 items-center justify-center px-6 py-12">
+          <View className="w-full max-w-[440px]">
+            <AuthCard
+              heading="Set a new password"
+              description="Choose a new password for your account."
+            >
+              <View className="gap-3">
+                <View className="gap-1.5">
+                  <PasswordField
+                    label="New password"
+                    placeholder="At least 8 characters"
+                    autoComplete="new-password"
+                    value={password}
+                    onChangeText={setPassword}
+                    error={errors.password}
+                  />
+                  <PasswordStrengthBar password={password} />
+                </View>
                 <PasswordField
-                  label="New password"
-                  placeholder="At least 8 characters"
+                  label="Confirm password"
+                  placeholder="Re-enter your password"
                   autoComplete="new-password"
-                  value={password}
-                  onChangeText={setPassword}
-                  error={errors.password}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  error={errors.confirmPassword}
                 />
-                <PasswordStrengthBar password={password} />
+
+                {resetPassword.isError && (
+                  <Text className="text-sm text-red-600">{resetPassword.error.message}</Text>
+                )}
+
+                <PrimaryButton
+                  label="Update password"
+                  onPress={onSubmit}
+                  loading={resetPassword.isPending}
+                />
               </View>
-              <PasswordField
-                label="Confirm password"
-                placeholder="Re-enter your password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                error={errors.confirmPassword}
-              />
-
-              {resetPassword.isError && (
-                <Text className="text-sm text-red-600">
-                  {resetPassword.error.message}
-                </Text>
-              )}
-
-              <PrimaryButton
-                label="Update password"
-                onPress={onSubmit}
-                loading={resetPassword.isPending}
-              />
-            </View>
-          </AuthCard>
+            </AuthCard>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

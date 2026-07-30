@@ -9,19 +9,13 @@ const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export function AuthNavigator() {
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="SignIn" component={SignInScreen} options={{ title: 'Sign In' }} />
-      <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: 'Sign Up' }} />
-      <Stack.Screen
-        name="ForgotPassword"
-        component={ForgotPasswordScreen}
-        options={{ title: 'Forgot Password' }}
-      />
-      <Stack.Screen
-        name="ResetPassword"
-        component={ResetPasswordScreen}
-        options={{ title: 'Reset Password' }}
-      />
+    // Every screen already has its own header via AuthHeader — the native
+    // stack header would just duplicate it with a second, plainer title bar.
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="SignIn" component={SignInScreen} />
+      <Stack.Screen name="SignUp" component={SignUpScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
     </Stack.Navigator>
   );
 }

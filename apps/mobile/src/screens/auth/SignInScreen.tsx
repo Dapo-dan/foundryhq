@@ -3,6 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { signInSchema } from '@foundryhq/shared-validation';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthCard } from '../../components/AuthCard';
 import { AuthHeader } from '../../components/AuthHeader';
 import { PasswordField } from '../../components/PasswordField';
@@ -35,49 +36,47 @@ export function SignInScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white">
-      <AuthHeader navLabel="Sign up" onNavPress={() => navigation.navigate('SignUp')} />
-      <View className="flex-1 items-center justify-center px-6 py-12">
-        <View className="w-full max-w-[440px]">
-          <AuthCard heading="Welcome back" description="Sign in to your FoundryHQ workspace.">
-            <View className="gap-3">
-              <TextField
-                label="Work email"
-                placeholder="you@company.com"
-                autoComplete="email"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-                error={errors.email}
-              />
-              <PasswordField
-                label="Password"
-                placeholder="At least 8 characters"
-                autoComplete="current-password"
-                value={password}
-                onChangeText={setPassword}
-                error={errors.password}
-              />
-              <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
-                <Text className="text-xs text-brand">Forgot password?</Text>
-              </Pressable>
+    // AuthHeader handles the top safe-area edge itself — only bottom is left
+    // to this SafeAreaView, otherwise the two would double up on top padding.
+    <SafeAreaView edges={['bottom']} className="flex-1 bg-white">
+      <ScrollView className="flex-1">
+        <AuthHeader navLabel="Sign up" onNavPress={() => navigation.navigate('SignUp')} />
+        <View className="flex-1 items-center justify-center px-6 py-12">
+          <View className="w-full max-w-[440px]">
+            <AuthCard heading="Welcome back" description="Sign in to your FoundryHQ workspace.">
+              <View className="gap-3">
+                <TextField
+                  label="Work email"
+                  placeholder="you@company.com"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  value={email}
+                  onChangeText={setEmail}
+                  error={errors.email}
+                />
+                <PasswordField
+                  label="Password"
+                  placeholder="At least 8 characters"
+                  autoComplete="current-password"
+                  value={password}
+                  onChangeText={setPassword}
+                  error={errors.password}
+                />
+                <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
+                  <Text className="text-xs text-brand">Forgot password?</Text>
+                </Pressable>
 
-              {signIn.isError && (
-                <Text className="text-sm text-red-600">
-                  {signIn.error.message}
-                </Text>
-              )}
+                {signIn.isError && (
+                  <Text className="text-sm text-red-600">{signIn.error.message}</Text>
+                )}
 
-              <PrimaryButton
-                label="Sign in"
-                onPress={onSubmit}
-                loading={signIn.isPending}
-              />
-            </View>
-          </AuthCard>
+                <PrimaryButton label="Sign in" onPress={onSubmit} loading={signIn.isPending} />
+              </View>
+            </AuthCard>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

@@ -13,17 +13,14 @@ export function OnboardingNavigator() {
   const isWorkspaceDone = useOnboardingStore((state) => state.completedSteps.includes('workspace'));
 
   return (
-    <Stack.Navigator initialRouteName={isWorkspaceDone ? 'Invite' : 'Workspace'}>
-      <Stack.Screen
-        name="Workspace"
-        component={WorkspaceScreen}
-        options={{ title: 'Create a Workspace' }}
-      />
-      <Stack.Screen
-        name="Invite"
-        component={InviteScreen}
-        options={{ title: 'Invite Your Team' }}
-      />
+    // Each screen already renders its own heading text — the native stack
+    // header would just duplicate it with a second, differently-worded title.
+    <Stack.Navigator
+      initialRouteName={isWorkspaceDone ? 'Invite' : 'Workspace'}
+      screenOptions={{ headerShown: false }}
+    >
+      <Stack.Screen name="Workspace" component={WorkspaceScreen} />
+      <Stack.Screen name="Invite" component={InviteScreen} />
     </Stack.Navigator>
   );
 }
