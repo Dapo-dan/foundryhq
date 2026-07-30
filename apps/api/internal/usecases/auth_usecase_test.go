@@ -247,6 +247,35 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	}
 }
 
+func TestRegister_ClaimsPlaceholderAccount(t *testing.T) {
+	u, users, tokens := newTestAuthUsecase()
+
+	// Simulate a placeholder account created by WorkspaceUsecase.Invite:
+	// email exists, no password. Registering with that email should claim
+	// it (set the password) rather than reject it as already-registered.
+	placeholderID := uuid.New()
+	users.byID[placeholderID] = &domain.User{ID: placeholderID, Email: "invited@example.com"}
+	users.byEmail["invited@example.com"] = users.byID[placeholderID]
+
+	result, err := u.Register(context.Background(), "Invited@Example.com", "password123")
+	if err != nil {
+		t.Fatalf("Register() error = %v", err)
+	}
+	if result.User.ID != placeholderID {
+		t.Errorf("User.ID = %v, want the claimed placeholder's ID %v", result.User.ID, placeholderID)
+	}
+	if len(users.byEmail) != 1 {
+		t.Errorf("expected the placeholder to be claimed in place, not duplicated; got %d users", len(users.byEmail))
+	}
+	if len(tokens.byHash) != 1 {
+		t.Errorf("expected 1 persisted refresh token, got %d", len(tokens.byHash))
+	}
+
+	if _, err := u.Login(context.Background(), "invited@example.com", "password123"); err != nil {
+		t.Errorf("Login() with the claimed password should succeed, got error = %v", err)
+	}
+}
+
 func TestLogin_Success(t *testing.T) {
 	u, _, _ := newTestAuthUsecase()
 	ctx := context.Background()

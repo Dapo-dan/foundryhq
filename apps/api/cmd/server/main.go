@@ -112,6 +112,25 @@ func main() {
 	router.POST("/auth/forgot-password", authHandler.ForgotPassword)
 	router.POST("/auth/reset-password", authHandler.ResetPassword)
 
+	workspaceUsecase := usecases.NewWorkspaceUsecase(
+		postgres.NewWorkspaceRepository(db),
+		postgres.NewWorkspaceMemberRepository(db),
+		postgres.NewUserRepository(db),
+	)
+	workspaceHandler := handlers.NewWorkspaceHandler(workspaceUsecase)
+
+	// protected groups every route that requires a signed-in caller —
+	// workspaces are the first such routes, so this is where middleware.Auth
+	// is actually attached for the first time.
+	protected := router.Group("", middleware.Auth(jwtManager))
+	protected.POST("/workspaces", workspaceHandler.Create)
+	protected.GET("/workspaces", workspaceHandler.List)
+	protected.GET("/workspaces/:id", workspaceHandler.Get)
+	protected.PATCH("/workspaces/:id", workspaceHandler.Update)
+	protected.GET("/workspaces/:id/members", workspaceHandler.ListMembers)
+	protected.POST("/workspaces/:id/members/invite", workspaceHandler.Invite)
+	protected.PATCH("/workspaces/:id/members/:memberId", workspaceHandler.UpdateMemberRole)
+
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: router,

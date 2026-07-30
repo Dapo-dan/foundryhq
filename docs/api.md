@@ -44,6 +44,8 @@ Human-curated overview of FoundryHQ's REST API. This is the index — the genera
 ### Workspaces & Team
 | Method | Path | Description |
 |---|---|---|
+| POST | `/workspaces` | Create a workspace (creator becomes owner) |
+| GET | `/workspaces` | List workspaces the caller belongs to |
 | GET | `/workspaces/{id}` | Get workspace details |
 | PATCH | `/workspaces/{id}` | Update workspace name/logo/slug |
 | GET | `/workspaces/{id}/members` | List members and roles |

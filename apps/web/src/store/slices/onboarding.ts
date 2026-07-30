@@ -4,27 +4,27 @@ import type { OnboardingStep, Role, TeamSize } from '@/types/onboarding'
 
 interface OnboardingState {
   workspaceName: string
+  // Set once WorkspaceForm's create-workspace call succeeds; the invite step
+  // needs it to target POST /workspaces/{id}/members/invite.
+  workspaceId: string | null
   teamSize: TeamSize | null
   role: Role | null
   tools: string[]
   invites: string[]
   completedSteps: OnboardingStep[]
-  // Whether this account has ever finished the wizard — distinct from
-  // `completedSteps`, which `reset()` clears once the user reaches the
-  // dashboard. Sign-in reads this to decide whether to resume onboarding.
-  onboardingComplete: boolean
   setWorkspaceName: (name: string) => void
+  setWorkspaceId: (id: string) => void
   setTeamSize: (size: TeamSize) => void
   setRole: (role: Role) => void
   toggleTool: (tool: string) => void
   setInvites: (emails: string[]) => void
   markStepComplete: (step: OnboardingStep) => void
-  markOnboardingComplete: () => void
   reset: () => void
 }
 
 const initialState = {
   workspaceName: '',
+  workspaceId: null,
   teamSize: null,
   role: null,
   tools: [],
@@ -39,8 +39,8 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       ...initialState,
-      onboardingComplete: false,
       setWorkspaceName: (name) => set({ workspaceName: name }),
+      setWorkspaceId: (id) => set({ workspaceId: id }),
       setTeamSize: (size) => set({ teamSize: size }),
       setRole: (role) => set({ role }),
       toggleTool: (tool) =>
@@ -56,9 +56,6 @@ export const useOnboardingStore = create<OnboardingState>()(
             ? state.completedSteps
             : [...state.completedSteps, step],
         })),
-      markOnboardingComplete: () => set({ onboardingComplete: true }),
-      // Only clears wizard progress (`initialState`) — `onboardingComplete`
-      // is deliberately excluded so it survives this reset.
       reset: () => set(initialState),
     }),
     { name: 'foundryhq-onboarding', storage: createJSONStorage(() => sessionStorage) }

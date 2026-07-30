@@ -31,15 +31,12 @@ export function WelcomeStepPage() {
   ]
 
   function onGoToDashboard() {
-    // Mark completion before navigating so a future sign-in knows this
-    // account already finished onboarding (see store's `onboardingComplete`).
-    // Deliberately don't clear `completedSteps` here: OnboardingLayout's
+    // AppLayout's guard now decides onboarding vs. dashboard from server
+    // truth (GET /workspaces), so there's no client-only flag to set here.
+    // Deliberately don't clear `completedSteps`: OnboardingLayout's
     // step-guard reads it, and clearing it while that layout is still
-    // mounted (navigation to /dashboard hasn't committed yet) redirects the
-    // user back to the first onboarding step instead of the dashboard.
-    // `completedSteps` is dead data once `onboardingComplete` is true — sign-in
-    // only checks the latter — so there's nothing to reset on this path.
-    useOnboardingStore.getState().markOnboardingComplete()
+    // mounted (navigation to /dashboard hasn't committed yet) would redirect
+    // back to the first onboarding step instead of the dashboard.
     navigate('/dashboard')
   }
 

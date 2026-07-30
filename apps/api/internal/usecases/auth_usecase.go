@@ -80,7 +80,12 @@ func NewAuthUsecase(
 	}
 }
 
-// Register creates a new user and issues a session for them.
+// Register creates a new user and issues a session for them. If email
+// already belongs to a placeholder account (invited into a workspace via
+// WorkspaceUsecase.Invite before ever signing up — see that method's doc
+// comment) it claims that account by setting its password instead of
+// rejecting the registration, since a placeholder has no password for the
+// caller to have "already registered" with.
 func (u *AuthUsecase) Register(ctx context.Context, email, password string) (*AuthResult, error) {
 	email = normalizeEmail(email)
 	if email == "" {
@@ -93,6 +98,21 @@ func (u *AuthUsecase) Register(ctx context.Context, email, password string) (*Au
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, apperrors.Internal(fmt.Errorf("hashing password: %w", err))
+	}
+
+	existing, err := u.userRepo.GetByEmail(ctx, email)
+	if err == nil {
+		if existing.PasswordHash != "" {
+			return nil, apperrors.Conflict("email already registered")
+		}
+		if err := u.userRepo.UpdatePassword(ctx, existing.ID, string(hash)); err != nil {
+			return nil, apperrors.Internal(fmt.Errorf("claiming placeholder account: %w", err))
+		}
+		existing.PasswordHash = string(hash)
+		return u.issueSession(ctx, existing)
+	}
+	if !errors.Is(err, domain.ErrUserNotFound) {
+		return nil, apperrors.Internal(fmt.Errorf("getting user: %w", err))
 	}
 
 	user := &domain.User{Email: email, PasswordHash: string(hash)}

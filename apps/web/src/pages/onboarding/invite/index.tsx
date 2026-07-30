@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { inviteEmailSchema } from '@foundryhq/shared-validation'
+import { useSendInvites } from '@/hooks/useSendInvites'
 import { useOnboardingStore } from '@/store/slices/onboarding'
 import { InviteEmailField } from './components/InviteEmailField'
 
@@ -10,6 +11,8 @@ export function InviteStepPage() {
   const storedInvites = useOnboardingStore((state) => state.invites)
   const setInvites = useOnboardingStore((state) => state.setInvites)
   const markStepComplete = useOnboardingStore((state) => state.markStepComplete)
+  const workspaceId = useOnboardingStore((state) => state.workspaceId)
+  const sendInvites = useSendInvites()
 
   const [emails, setEmails] = useState<string[]>(
     storedInvites.length ? storedInvites : ['', '', '']
@@ -42,8 +45,14 @@ export function InviteStepPage() {
 
   function onSendInvite() {
     if (!validate()) return
-    setInvites(emails.filter(Boolean))
-    finishStep()
+    const filtered = emails.filter(Boolean)
+    setInvites(filtered)
+
+    if (!workspaceId || filtered.length === 0) {
+      finishStep()
+      return
+    }
+    sendInvites.mutate({ workspaceId, emails: filtered }, { onSuccess: finishStep })
   }
 
   function onSkip() {
@@ -75,8 +84,16 @@ export function InviteStepPage() {
           + Add another
         </button>
       </div>
-      <Button type="button" className="h-11 w-full text-[15px]" onClick={onSendInvite}>
-        Send invite →
+      {sendInvites.isError && (
+        <p className="text-center text-sm text-destructive">{sendInvites.error.message}</p>
+      )}
+      <Button
+        type="button"
+        className="h-11 w-full text-[15px]"
+        onClick={onSendInvite}
+        disabled={sendInvites.isPending}
+      >
+        {sendInvites.isPending ? 'Sending…' : 'Send invite →'}
       </Button>
       <button
         type="button"

@@ -5,13 +5,16 @@ import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { workspaceSchema, type WorkspaceFormValues } from '@foundryhq/shared-validation'
+import { useCreateWorkspace } from '@/hooks/useCreateWorkspace'
 import { useOnboardingStore } from '@/store/slices/onboarding'
 
 export function WorkspaceForm() {
   const navigate = useNavigate()
   const workspaceName = useOnboardingStore((state) => state.workspaceName)
   const setWorkspaceName = useOnboardingStore((state) => state.setWorkspaceName)
+  const setWorkspaceId = useOnboardingStore((state) => state.setWorkspaceId)
   const markStepComplete = useOnboardingStore((state) => state.markStepComplete)
+  const createWorkspace = useCreateWorkspace()
 
   const form = useForm({
     resolver: zodResolver(workspaceSchema),
@@ -19,9 +22,17 @@ export function WorkspaceForm() {
   })
 
   function onSubmit(values: WorkspaceFormValues) {
-    setWorkspaceName(values.name)
-    markStepComplete('workspace')
-    navigate('/onboarding/team-size')
+    createWorkspace.mutate(
+      { name: values.name },
+      {
+        onSuccess: (workspace) => {
+          setWorkspaceName(values.name)
+          setWorkspaceId(workspace.id)
+          markStepComplete('workspace')
+          navigate('/onboarding/team-size')
+        },
+      }
+    )
   }
 
   return (
@@ -39,8 +50,15 @@ export function WorkspaceForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="mt-1 h-11 w-full text-[15px]">
-          Continue →
+        {createWorkspace.isError && (
+          <p className="text-sm text-destructive">{createWorkspace.error.message}</p>
+        )}
+        <Button
+          type="submit"
+          className="mt-1 h-11 w-full text-[15px]"
+          disabled={createWorkspace.isPending}
+        >
+          {createWorkspace.isPending ? 'Creating…' : 'Continue →'}
         </Button>
       </form>
     </Form>

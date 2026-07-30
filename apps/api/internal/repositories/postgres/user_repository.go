@@ -20,10 +20,16 @@ import (
 // 000001_init_schema). oauth_provider/oauth_id exist in the schema for the
 // v1.1+ OAuth flow (docs/mvp.md) but aren't mapped here — nothing in the
 // current codebase reads or writes them yet.
+//
+// PasswordHash is a pointer because the column is nullable: workspace
+// invites (see usecases.WorkspaceUsecase.Invite) create placeholder users
+// with no password before they've ever signed up, and domain.User represents
+// "no password set" as "" — a plain string field can't round-trip a NULL
+// through database/sql's Scan.
 type userModel struct {
 	ID           uuid.UUID `gorm:"column:id;type:uuid;primaryKey;default:gen_random_uuid()"`
 	Email        string    `gorm:"column:email"`
-	PasswordHash string    `gorm:"column:password_hash"`
+	PasswordHash *string   `gorm:"column:password_hash"`
 	CreatedAt    time.Time `gorm:"column:created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at"`
 }
@@ -31,21 +37,24 @@ type userModel struct {
 func (userModel) TableName() string { return "users" }
 
 func (m userModel) toDomain() *domain.User {
-	return &domain.User{
-		ID:           m.ID,
-		Email:        m.Email,
-		PasswordHash: m.PasswordHash,
-		CreatedAt:    m.CreatedAt,
-		UpdatedAt:    m.UpdatedAt,
+	user := &domain.User{
+		ID:        m.ID,
+		Email:     m.Email,
+		CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
 	}
+	if m.PasswordHash != nil {
+		user.PasswordHash = *m.PasswordHash
+	}
+	return user
 }
 
 func userModelFromDomain(u *domain.User) *userModel {
-	return &userModel{
-		ID:           u.ID,
-		Email:        u.Email,
-		PasswordHash: u.PasswordHash,
+	model := &userModel{ID: u.ID, Email: u.Email}
+	if u.PasswordHash != "" {
+		model.PasswordHash = &u.PasswordHash
 	}
+	return model
 }
 
 // UserRepository implements domain.UserRepository on top of GORM/Postgres.

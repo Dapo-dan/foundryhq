@@ -125,6 +125,26 @@ func TestUserRepository_UpdatePassword(t *testing.T) {
 	})
 }
 
+func TestUserRepository_Create_PlaceholderUserHasNoPassword(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		repo := NewUserRepository(tx)
+		ctx := context.Background()
+
+		placeholder := &domain.User{Email: "invited-" + uuid.NewString() + "@example.com"}
+		if err := repo.Create(ctx, placeholder); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		got, err := repo.GetByEmail(ctx, placeholder.Email)
+		if err != nil {
+			t.Fatalf("GetByEmail() error = %v", err)
+		}
+		if got.PasswordHash != "" {
+			t.Errorf("PasswordHash = %q, want empty for a placeholder user with a NULL password_hash column", got.PasswordHash)
+		}
+	})
+}
+
 func TestUserRepository_UpdatePassword_NotFound(t *testing.T) {
 	withTestTx(t, func(tx *gorm.DB) {
 		repo := NewUserRepository(tx)

@@ -15,10 +15,3 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   'invite',
   'welcome',
 ]
-
-export interface CreateWorkspaceInput {
-  name: string
-  teamSize: TeamSize
-  role: Role
-  tools: string[]
-}

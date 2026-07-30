@@ -15,6 +15,7 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { Separator } from '@/components/ui/separator'
 import { useSignIn } from '@/hooks/useSignIn'
 import { signInSchema, type SignInFormValues } from '@foundryhq/shared-validation'
+import { listWorkspaces } from '@/services/workspace'
 import { useOnboardingStore } from '@/store/slices/onboarding'
 import { ONBOARDING_STEPS } from '@/types/onboarding'
 import { OAuthButtons } from '../../components/OAuthButtons'
@@ -29,14 +30,17 @@ export function SignInForm() {
 
   function onSubmit(values: SignInFormValues) {
     signIn.mutate(values, {
-      onSuccess: () => {
-        const { onboardingComplete, completedSteps } = useOnboardingStore.getState()
-        if (onboardingComplete) {
+      onSuccess: async () => {
+        // Server truth decides onboarding vs. dashboard — not a client-only
+        // flag, which could go stale relative to what actually exists.
+        const workspaces = await listWorkspaces()
+        if (workspaces.length > 0) {
           navigate('/dashboard')
           return
         }
         // Resume exactly where they left off, same rule OnboardingLayout's
         // step-guard uses to find the first step they haven't finished yet.
+        const { completedSteps } = useOnboardingStore.getState()
         const nextStep = ONBOARDING_STEPS.find((step) => !completedSteps.includes(step))
         navigate(`/onboarding/${nextStep ?? 'workspace'}`)
       },
