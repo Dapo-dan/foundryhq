@@ -144,6 +144,20 @@ func main() {
 	projects.PATCH("/:id", projectHandler.Update)
 	projects.DELETE("/:id", projectHandler.Delete)
 
+	taskUsecase := usecases.NewTaskUsecase(
+		postgres.NewTaskRepository(db),
+		postgres.NewProjectRepository(db),
+		postgres.NewWorkspaceMemberRepository(db),
+	)
+	taskHandler := handlers.NewTaskHandler(taskUsecase)
+
+	tasks := protected.Group("/workspaces/:workspaceId/tasks")
+	tasks.POST("", taskHandler.Create)
+	tasks.GET("", taskHandler.List)
+	tasks.GET("/:taskId", taskHandler.Get)
+	tasks.PATCH("/:taskId", taskHandler.Update)
+	tasks.DELETE("/:taskId", taskHandler.Delete)
+
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: router,

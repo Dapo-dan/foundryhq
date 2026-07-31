@@ -74,8 +74,8 @@ Human-curated overview of FoundryHQ's REST API. This is the index — the genera
 ### Tasks & Sprints
 | Method | Path | Description |
 |---|---|---|
-| GET / POST | `/tasks` | List (backlog or filtered) / create tasks |
-| GET / PATCH / DELETE | `/tasks/{id}` | Read / update (status, assignee, priority) / soft-delete a task |
+| GET / POST | `/workspaces/{id}/tasks` | List (optionally filtered by `projectId`/`status`/`assigneeId`) / create tasks |
+| GET / PATCH / DELETE | `/workspaces/{id}/tasks/{taskId}` | Read / update (title, project, status, assignee) / soft-delete a task |
 | GET / POST | `/sprints` | List / create sprints |
 | GET | `/sprints/{id}` | Sprint detail with tasks grouped by status |
 | GET | `/sprints/{id}/velocity` | Computed velocity for the sprint |
