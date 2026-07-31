@@ -12,7 +12,7 @@
 
 ## Status
 
-Auth is built end-to-end (API + web). The web app also has UI for CRM, tasks, goals, meetings, team, dashboard, and KPIs, but those currently run on mock data (`apps/web/src/lib/mock/`) rather than a live backend — only auth is wired to the real API so far. `apps/mobile` is now scaffolded (Expo + TypeScript, boots on iOS/Android/web) but has no screens yet. The **Features** section below describes the target product; see [`docs/mvp.md`](docs/mvp.md) for what's actually being built first (Auth, Workspace/Team, Tasks) and [`docs/roadmap.md`](docs/roadmap.md) for sequencing after that.
+Auth, Workspace/Team, and Task Management (Kanban board, assignments, priorities, due dates, sprint planning with velocity tracking) are built end-to-end (API + web) and wired to a live Postgres-backed API — see [`docs/roadmap.md`](docs/roadmap.md)'s Shipped section for the full breakdown. The web app also has UI for CRM, goals, meetings, dashboard, and KPIs, but those still run on mock data (`apps/web/src/lib/mock/`) rather than a live backend. `apps/mobile` is scaffolded (Expo + TypeScript, boots on iOS/Android/web) but has no screens yet. The **Features** section below describes the target product; see [`docs/mvp.md`](docs/mvp.md) for the v1 build order and [`docs/roadmap.md`](docs/roadmap.md) for sequencing after that.
 
 ---
 
@@ -134,7 +134,7 @@ foundryhq/                          # Monorepo root
 
 ### Quick Start (Docker)
 
-`apps/api` and `apps/web` have no code yet (see **Status** above), so `docker-compose.yml` currently only brings up the database infra. The API and web services will be added to it once they're scaffolded.
+`docker-compose.yml` brings up Postgres and pgAdmin; `apps/api` and `apps/web` run directly on the host (not yet containerized) — see **Local Development** below for how to start them.
 
 ```bash
 git clone https://github.com/foundryhq/foundryhq.git
@@ -147,18 +147,31 @@ cp apps/api/.env.example apps/api/.env
 docker compose up
 ```
 
-- Postgres: localhost:5432
+- Postgres: localhost:5434 (mapped from the container's 5432 to avoid colliding with a locally-installed Postgres)
 - pgAdmin: http://localhost:5050
 
-Once `apps/api` and `apps/web` are scaffolded (see `docs/mvp.md`), this section will be updated with the commands to run them — targeting:
+Once the database is up, apply migrations and start the API and web app per **Local Development** below — targeting:
 
 - Web app: http://localhost:5173
 - API: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger/index.html
 
 ### Local Development
 
-Not yet available — `apps/api`, `apps/web`, and `apps/mobile` have no code to run. This section will be filled in as each app is scaffolded per `docs/mvp.md`.
+```bash
+# Install JS/TS dependencies across the pnpm workspace
+pnpm install
+
+# Apply database migrations (requires the golang-migrate CLI — see apps/api/Makefile)
+cd apps/api && make migrate-up
+
+# Run the API (from apps/api)
+go run ./cmd/server
+
+# Run the web app (from apps/web, in another shell)
+pnpm dev
+```
+
+`apps/mobile` is scaffolded (Expo) but has no screens yet — see `docs/mvp.md` for what's still outstanding there.
 
 ---
 

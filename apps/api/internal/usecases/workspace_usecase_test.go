@@ -274,6 +274,31 @@ func TestUpdate_SlugConflict(t *testing.T) {
 	}
 }
 
+func TestUpdate_ForbiddenForNonOwner(t *testing.T) {
+	u, _, _, users := newTestWorkspaceUsecase()
+	ownerID := uuid.New()
+
+	workspace, err := u.Create(context.Background(), ownerID, "Acme Inc.")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	member := &domain.User{Email: "member@example.com", PasswordHash: "hashed"}
+	if err := users.Create(context.Background(), member); err != nil {
+		t.Fatalf("seeding user: %v", err)
+	}
+	if _, err := u.Invite(context.Background(), ownerID, workspace.ID, "member@example.com"); err != nil {
+		t.Fatalf("Invite() error = %v", err)
+	}
+
+	newName := "Hijacked Name"
+	_, err = u.Update(context.Background(), member.ID, workspace.ID, UpdateWorkspaceInput{Name: &newName})
+	appErr := asAppError(t, err)
+	if appErr.Code != apperrors.CodeForbidden {
+		t.Errorf("Code = %v, want %v", appErr.Code, apperrors.CodeForbidden)
+	}
+}
+
 func TestListForUser(t *testing.T) {
 	u, _, _, _ := newTestWorkspaceUsecase()
 	ownerID := uuid.New()
@@ -441,6 +466,37 @@ func TestUpdateMemberRole_RefusesToLeaveOwnerless(t *testing.T) {
 	appErr := asAppError(t, err)
 	if appErr.Code != apperrors.CodeConflict {
 		t.Errorf("Code = %v, want %v", appErr.Code, apperrors.CodeConflict)
+	}
+}
+
+func TestUpdateMemberRole_ForbiddenForNonOwner(t *testing.T) {
+	u, _, members, users := newTestWorkspaceUsecase()
+	ownerID := uuid.New()
+
+	workspace, err := u.Create(context.Background(), ownerID, "Acme Inc.")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	memberUser := &domain.User{Email: "member@example.com", PasswordHash: "hashed"}
+	if err := users.Create(context.Background(), memberUser); err != nil {
+		t.Fatalf("seeding user: %v", err)
+	}
+	if _, err := u.Invite(context.Background(), ownerID, workspace.ID, "member@example.com"); err != nil {
+		t.Fatalf("Invite() error = %v", err)
+	}
+
+	owner, err := members.GetByWorkspaceAndUser(context.Background(), workspace.ID, ownerID)
+	if err != nil {
+		t.Fatalf("getting owner membership: %v", err)
+	}
+
+	// A plain member must not be able to self-promote to owner (or change
+	// anyone else's role) — only the owner may call UpdateMemberRole.
+	err = u.UpdateMemberRole(context.Background(), memberUser.ID, workspace.ID, owner.ID, domain.RoleMember)
+	appErr := asAppError(t, err)
+	if appErr.Code != apperrors.CodeForbidden {
+		t.Errorf("Code = %v, want %v", appErr.Code, apperrors.CodeForbidden)
 	}
 }
 

@@ -48,10 +48,12 @@ type updateTaskRequest struct {
 	AssigneeID       *string `json:"assigneeId"`
 	ClearAssignee    bool    `json:"clearAssignee"`
 	SprintID         *string `json:"sprintId"`
+	ClearSprint      bool    `json:"clearSprint"`
 	Priority         *string `json:"priority"`
 	StoryPoints      *int    `json:"storyPoints"`
 	ClearStoryPoints bool    `json:"clearStoryPoints"`
 	DueDate          *string `json:"dueDate"`
+	ClearDueDate     bool    `json:"clearDueDate"`
 }
 
 type taskResponse struct {
@@ -251,8 +253,10 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	input := usecases.UpdateTaskInput{
 		Title:            req.Title,
 		ClearAssignee:    req.ClearAssignee,
+		ClearSprint:      req.ClearSprint,
 		StoryPoints:      req.StoryPoints,
 		ClearStoryPoints: req.ClearStoryPoints,
+		ClearDueDate:     req.ClearDueDate,
 	}
 	if req.ProjectID != nil {
 		id, err := uuid.Parse(*req.ProjectID)

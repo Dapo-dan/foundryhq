@@ -49,14 +49,21 @@ type UpdateTaskInput struct {
 	// because AssigneeID's own nil already means "leave unchanged", so a
 	// plain nil can't also mean "unassign".
 	ClearAssignee bool
-	SprintID      *uuid.UUID
-	Priority      *domain.TaskPriority
-	StoryPoints   *int
+	SprintID *uuid.UUID
+	// ClearSprint moves the task back to the backlog regardless of
+	// SprintID — same rationale as ClearAssignee (SprintID's own nil already
+	// means "leave unchanged", so clearing needs its own explicit signal).
+	ClearSprint bool
+	Priority    *domain.TaskPriority
+	StoryPoints *int
 	// ClearStoryPoints clears story points regardless of StoryPoints — same
 	// rationale as ClearAssignee (a plain nil already means "leave
 	// unchanged", so clearing needs its own explicit signal).
 	ClearStoryPoints bool
 	DueDate          *time.Time
+	// ClearDueDate clears the due date regardless of DueDate — same
+	// rationale as ClearAssignee.
+	ClearDueDate bool
 }
 
 // Create makes a new task in workspaceID, gated on callerID being a member
@@ -178,7 +185,9 @@ func (u *TaskUsecase) Update(ctx context.Context, callerID, workspaceID, taskID 
 		}
 		task.AssigneeID = input.AssigneeID
 	}
-	if input.SprintID != nil && (task.SprintID == nil || *input.SprintID != *task.SprintID) {
+	if input.ClearSprint {
+		task.SprintID = nil
+	} else if input.SprintID != nil && (task.SprintID == nil || *input.SprintID != *task.SprintID) {
 		if err := u.requireSprintInWorkspace(ctx, workspaceID, *input.SprintID); err != nil {
 			return nil, err
 		}
@@ -198,7 +207,9 @@ func (u *TaskUsecase) Update(ctx context.Context, callerID, workspaceID, taskID 
 		}
 		task.StoryPoints = input.StoryPoints
 	}
-	if input.DueDate != nil {
+	if input.ClearDueDate {
+		task.DueDate = nil
+	} else if input.DueDate != nil {
 		task.DueDate = input.DueDate
 	}
 

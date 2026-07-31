@@ -156,12 +156,12 @@ The system shall let a user create, edit, delete, and assign tasks within a work
 | REQ-02 | Authentication / Team Management | All | Planned — v1 (Owner/Member only); Admin/Viewer roles deferred to v1.1+ |
 | REQ-03 | CRM | Early Sales Rep | Planned — v1.1+ |
 | REQ-04 | CRM | Early Sales Rep | Planned — v1.1+ |
-| REQ-05 | Task Management | Product Engineer | Planned — v1 (see `mvp.md`; depends on REQ-11) |
+| REQ-05 | Task Management | Product Engineer | Shipped — v1 (see `mvp.md`) |
 | REQ-06 | Meeting Notes | Founder-Operator, Product Engineer | Planned — v1.1+ |
 | REQ-07 | Goal Tracking (OKRs) | Founder-Operator, Product Engineer | Planned — v1.1+ |
 | REQ-08 | KPI Dashboard | Founder-Operator, Investor/Advisor | Planned — v1.1+ |
 | REQ-09 | KPI Dashboard | Investor/Advisor | Planned — v1.1+ |
 | REQ-10 | Notifications | All | Planned — v1.1+ |
-| REQ-11 | Task Management | Product Engineer, All | Planned — v1 (see `mvp.md`) |
+| REQ-11 | Task Management | Product Engineer, All | Shipped — v1 (see `mvp.md`); sub-tasks/labels deferred to v1.1+ |
 
-No code has been written yet — see `roadmap.md` for the corrected current status. New requirements should be added here with a fresh REQ-ID before a PRD or ticket is written — see the elicitation workflow in `../.ai/business-analysis/requirements.md` and the PRD template in `../.ai/product/prd.md`.
+See `roadmap.md`'s Shipped section for current status. New requirements should be added here with a fresh REQ-ID before a PRD or ticket is written — see the elicitation workflow in `../.ai/business-analysis/requirements.md` and the PRD template in `../.ai/product/prd.md`.

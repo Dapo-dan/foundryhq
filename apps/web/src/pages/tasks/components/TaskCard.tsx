@@ -14,9 +14,10 @@ const PRIORITY_VARIANT: Record<TaskPriority, VariantProps<typeof badgeVariants>[
 interface TaskCardProps {
   task: Task
   projectName: string | undefined
+  onSelect: (task: Task) => void
 }
 
-export function TaskCard({ task, projectName }: TaskCardProps) {
+export function TaskCard({ task, projectName, onSelect }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   })
@@ -33,6 +34,11 @@ export function TaskCard({ task, projectName }: TaskCardProps) {
       }}
       {...attributes}
       {...listeners}
+      // dnd-kit's PointerSensor only starts a drag past its activation
+      // distance (see KanbanBoard's sensor config) — a plain click/tap never
+      // crosses that threshold, so this fires normally for a real click and
+      // is a no-op mid-drag.
+      onClick={() => onSelect(task)}
       className="flex cursor-grab flex-col gap-2 rounded-lg border border-border bg-card p-3 text-sm active:cursor-grabbing"
     >
       <p className="font-medium text-foreground">{task.title}</p>

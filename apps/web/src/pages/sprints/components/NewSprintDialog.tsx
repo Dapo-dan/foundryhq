@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { sprintSchema, type SprintFormValues } from '@foundryhq/shared-validation'
 import { Button } from '@/components/ui/button'
-import { DateField } from '@/components/ui/date-field'
+import { DateRangeField } from '@/components/ui/date-range-field'
 import {
   Dialog,
   DialogContent,
@@ -59,34 +59,35 @@ export function NewSprintDialog({ open, onOpenChange }: NewSprintDialogProps) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start date</FormLabel>
-                    <FormControl>
-                      <DateField value={field.value} onChange={field.onChange} placeholder="Start date" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End date</FormLabel>
-                    <FormControl>
-                      <DateField value={field.value} onChange={field.onChange} placeholder="End date" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="startDate"
+              render={({ field: startField }) => (
+                <FormItem>
+                  <FormLabel>Sprint dates</FormLabel>
+                  <FormControl>
+                    <DateRangeField
+                      startValue={startField.value}
+                      endValue={form.watch('endDate')}
+                      onChangeStart={startField.onChange}
+                      onChangeEnd={(value) =>
+                        form.setValue('endDate', value, { shouldValidate: true, shouldTouch: true })
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="endDate"
+              render={() => (
+                <FormItem>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             {createSprint.isError && (
               <p className="text-sm text-destructive">{createSprint.error.message}</p>
             )}

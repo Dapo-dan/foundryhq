@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { useCreateProject } from '@/hooks/useCreateProject'
 import { useProjects } from '@/hooks/useProjects'
 import { projectSchema, type ProjectFormValues } from '@foundryhq/shared-validation'
+import { ProjectCard } from './components/ProjectCard'
 
 export function ProjectsPage() {
   const [open, setOpen] = useState(false)
@@ -59,12 +60,7 @@ export function ProjectsPage() {
       ) : hasProjects ? (
         <div className="flex flex-col gap-2">
           {projects!.map((project) => (
-            <div key={project.id} className="rounded-lg border border-border p-4">
-              <h3 className="font-medium">{project.name}</h3>
-              {project.description && (
-                <p className="text-sm text-muted-foreground">{project.description}</p>
-              )}
-            </div>
+            <ProjectCard key={project.id} project={project} />
           ))}
         </div>
       ) : (

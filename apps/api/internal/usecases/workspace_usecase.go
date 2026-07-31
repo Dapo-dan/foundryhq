@@ -91,10 +91,11 @@ func (u *WorkspaceUsecase) ListForUser(ctx context.Context, userID uuid.UUID) ([
 }
 
 // Update applies input's non-nil fields to workspaceID, gated on callerID
-// being a member of it. A Slug change is rejected with a conflict if it
+// being the workspace's owner — renaming/rebranding a shared workspace isn't
+// a plain-member action. A Slug change is rejected with a conflict if it
 // collides with another workspace's slug.
 func (u *WorkspaceUsecase) Update(ctx context.Context, callerID, workspaceID uuid.UUID, input UpdateWorkspaceInput) (*domain.Workspace, error) {
-	if err := u.requireMembership(ctx, workspaceID, callerID); err != nil {
+	if err := u.requireOwner(ctx, workspaceID, callerID); err != nil {
 		return nil, err
 	}
 
@@ -192,11 +193,13 @@ func (u *WorkspaceUsecase) Invite(ctx context.Context, callerID, workspaceID uui
 }
 
 // UpdateMemberRole changes memberID's role within workspaceID, gated on
-// callerID being a member of it. There's no transfer-ownership endpoint, so
-// a change that would leave the workspace without an owner is refused with a
-// conflict rather than performed.
+// callerID being the workspace's owner — a plain member must not be able to
+// promote themselves (or anyone else) to owner, or demote the owner, which is
+// why this checks ownership rather than plain membership. There's no
+// transfer-ownership endpoint, so a change that would leave the workspace
+// without an owner is refused with a conflict rather than performed.
 func (u *WorkspaceUsecase) UpdateMemberRole(ctx context.Context, callerID, workspaceID, memberID uuid.UUID, role domain.WorkspaceRole) error {
-	if err := u.requireMembership(ctx, workspaceID, callerID); err != nil {
+	if err := u.requireOwner(ctx, workspaceID, callerID); err != nil {
 		return err
 	}
 	if role != domain.RoleOwner && role != domain.RoleMember {
@@ -241,6 +244,26 @@ func (u *WorkspaceUsecase) requireMembership(ctx context.Context, workspaceID, u
 			return apperrors.Forbidden("not a member of this workspace")
 		}
 		return apperrors.Internal(fmt.Errorf("checking workspace membership: %w", err))
+	}
+	return nil
+}
+
+// requireOwner returns apperrors.Forbidden unless userID is a member of
+// workspaceID with the owner role. Used by the handful of actions
+// (workspace settings, member role changes) that plain membership isn't
+// enough to authorize — see docs/api.md's "forbidden" error, which is
+// documented as "the workspace role doesn't permit this action", not just
+// "not a member".
+func (u *WorkspaceUsecase) requireOwner(ctx context.Context, workspaceID, userID uuid.UUID) error {
+	member, err := u.memberRepo.GetByWorkspaceAndUser(ctx, workspaceID, userID)
+	if err != nil {
+		if errors.Is(err, domain.ErrWorkspaceMemberNotFound) {
+			return apperrors.Forbidden("not a member of this workspace")
+		}
+		return apperrors.Internal(fmt.Errorf("checking workspace membership: %w", err))
+	}
+	if member.Role != domain.RoleOwner {
+		return apperrors.Forbidden("only the workspace owner can perform this action")
 	}
 	return nil
 }

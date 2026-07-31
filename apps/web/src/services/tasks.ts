@@ -50,10 +50,12 @@ export interface UpdateTaskInput {
   assigneeId?: string
   clearAssignee?: boolean
   sprintId?: string
+  clearSprint?: boolean
   priority?: TaskPriority
   storyPoints?: number
   clearStoryPoints?: boolean
   dueDate?: string
+  clearDueDate?: boolean
 }
 
 export function updateTask(taskId: string, input: UpdateTaskInput) {

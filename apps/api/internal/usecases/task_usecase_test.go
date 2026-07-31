@@ -480,6 +480,55 @@ func TestTaskUpdate_ClearStoryPoints(t *testing.T) {
 	}
 }
 
+func TestTaskUpdate_ClearSprint(t *testing.T) {
+	u, _, projects, sprints, members := newTestTaskUsecaseWithSprints()
+	workspaceID, callerID := uuid.New(), uuid.New()
+	seedMembership(t, members, workspaceID, callerID)
+	project := seedProject(t, projects, workspaceID)
+	sprint := &domain.Sprint{WorkspaceID: workspaceID, Name: "Sprint 1"}
+	if err := sprints.Create(context.Background(), sprint); err != nil {
+		t.Fatalf("seeding sprint: %v", err)
+	}
+
+	task, err := u.Create(context.Background(), callerID, workspaceID, CreateTaskInput{
+		ProjectID: project.ID, Title: "Ship it", SprintID: &sprint.ID,
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	updated, err := u.Update(context.Background(), callerID, workspaceID, task.ID, UpdateTaskInput{ClearSprint: true})
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	if updated.SprintID != nil {
+		t.Errorf("SprintID = %v, want nil after ClearSprint", updated.SprintID)
+	}
+}
+
+func TestTaskUpdate_ClearDueDate(t *testing.T) {
+	u, _, projects, members := newTestTaskUsecase()
+	workspaceID, callerID := uuid.New(), uuid.New()
+	seedMembership(t, members, workspaceID, callerID)
+	project := seedProject(t, projects, workspaceID)
+
+	dueDate := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+	task, err := u.Create(context.Background(), callerID, workspaceID, CreateTaskInput{
+		ProjectID: project.ID, Title: "Ship it", DueDate: &dueDate,
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	updated, err := u.Update(context.Background(), callerID, workspaceID, task.ID, UpdateTaskInput{ClearDueDate: true})
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	if updated.DueDate != nil {
+		t.Errorf("DueDate = %v, want nil after ClearDueDate", updated.DueDate)
+	}
+}
+
 func TestTaskDelete_NotFound(t *testing.T) {
 	u, _, _, members := newTestTaskUsecase()
 	workspaceID, callerID := uuid.New(), uuid.New()

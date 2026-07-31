@@ -19,11 +19,12 @@ const COLUMNS: { status: TaskStatus; label: string }[] = [
 interface KanbanBoardProps {
   tasks: Task[]
   projectsById: Record<string, Project>
+  onSelectTask: (task: Task) => void
 }
 
 // Extracted from TasksPage so the Sprints detail page can show the same
 // drag-and-drop board for a sprint's tasks instead of duplicating it.
-export function KanbanBoard({ tasks, projectsById }: KanbanBoardProps) {
+export function KanbanBoard({ tasks, projectsById, onSelectTask }: KanbanBoardProps) {
   const updateTask = useUpdateTask()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
@@ -60,6 +61,7 @@ export function KanbanBoard({ tasks, projectsById }: KanbanBoardProps) {
             label={column.label}
             tasks={tasks.filter((task) => task.status === column.status)}
             projectsById={projectsById}
+            onSelectTask={onSelectTask}
           />
         ))}
       </div>

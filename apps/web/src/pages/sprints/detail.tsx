@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { ArrowLeft } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import type { Project } from '@foundryhq/shared-types'
+import type { Project, Task } from '@foundryhq/shared-types'
+import { EditTaskDialog } from '@/pages/tasks/components/EditTaskDialog'
 import { KanbanBoard } from '@/pages/tasks/components/KanbanBoard'
 import { useProjects } from '@/hooks/useProjects'
 import { useSprintDetail } from '@/hooks/useSprintDetail'
@@ -15,6 +16,7 @@ function formatDate(dateOnly: string): string {
 
 export function SprintDetailPage() {
   const { sprintId } = useParams<{ sprintId: string }>()
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const { data, isPending } = useSprintDetail(sprintId)
   const { data: velocity } = useVelocity(sprintId)
   const { data: projects } = useProjects()
@@ -62,7 +64,17 @@ export function SprintDetailPage() {
         </div>
       </div>
 
-      <KanbanBoard tasks={tasks ?? []} projectsById={projectsById} />
+      <KanbanBoard tasks={tasks ?? []} projectsById={projectsById} onSelectTask={setSelectedTask} />
+
+      {selectedTask && (
+        <EditTaskDialog
+          key={selectedTask.id}
+          open={Boolean(selectedTask)}
+          onOpenChange={(open) => !open && setSelectedTask(null)}
+          task={selectedTask}
+          projects={projects ?? []}
+        />
+      )}
     </div>
   )
 }

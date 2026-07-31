@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react'
 import { CheckSquare, Plus } from 'lucide-react'
-import type { Project } from '@foundryhq/shared-types'
+import type { Project, Task } from '@foundryhq/shared-types'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useProjects } from '@/hooks/useProjects'
 import { useTasks } from '@/hooks/useTasks'
+import { EditTaskDialog } from './components/EditTaskDialog'
 import { KanbanBoard } from './components/KanbanBoard'
 import { NewTaskDialog } from './components/NewTaskDialog'
 
 export function TasksPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [projectFilter, setProjectFilter] = useState('')
 
   const { data: projects } = useProjects()
@@ -57,7 +59,7 @@ export function TasksPage() {
       {isPending ? (
         <p className="text-sm text-muted-foreground">Loading tasks…</p>
       ) : hasTasks ? (
-        <KanbanBoard tasks={tasks ?? []} projectsById={projectsById} />
+        <KanbanBoard tasks={tasks ?? []} projectsById={projectsById} onSelectTask={setSelectedTask} />
       ) : (
         <EmptyState
           icon={CheckSquare}
@@ -72,6 +74,16 @@ export function TasksPage() {
       )}
 
       <NewTaskDialog open={dialogOpen} onOpenChange={setDialogOpen} projects={projects ?? []} />
+
+      {selectedTask && (
+        <EditTaskDialog
+          key={selectedTask.id}
+          open={Boolean(selectedTask)}
+          onOpenChange={(open) => !open && setSelectedTask(null)}
+          task={selectedTask}
+          projects={projects ?? []}
+        />
+      )}
     </div>
   )
 }

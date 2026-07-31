@@ -8,9 +8,10 @@ interface TaskColumnProps {
   label: string
   tasks: Task[]
   projectsById: Record<string, Project>
+  onSelectTask: (task: Task) => void
 }
 
-export function TaskColumn({ status, label, tasks, projectsById }: TaskColumnProps) {
+export function TaskColumn({ status, label, tasks, projectsById, onSelectTask }: TaskColumnProps) {
   // The column itself is the drop target (via its status id) — a card can
   // land here even when the column is empty, which a SortableContext alone
   // (only aware of existing items) can't provide.
@@ -25,7 +26,12 @@ export function TaskColumn({ status, label, tasks, projectsById }: TaskColumnPro
       <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
         <div className="flex min-h-12 flex-col gap-2">
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} projectName={projectsById[task.projectId]?.name} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              projectName={projectsById[task.projectId]?.name}
+              onSelect={onSelectTask}
+            />
           ))}
         </div>
       </SortableContext>

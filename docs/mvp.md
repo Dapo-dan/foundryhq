@@ -1,6 +1,6 @@
 # MVP — Version 1
 
-*Last updated: 2026-07-10.* FoundryHQ's full vision (see `vision.md`) spans eight modules — too much for a single month. This document scopes exactly what ships in **Version 1** versus what's deferred. Nothing in this repo is built yet (see `../PROJECT.md` and `../README.md` for target-state architecture); this is the build order.
+*Last updated: 2026-07-31.* FoundryHQ's full vision (see `vision.md`) spans eight modules — too much for a single month. This document scopes exactly what ships in **Version 1** versus what's deferred. Auth, Workspace/Team, and Task Management (including sprints/velocity) are now built on web and the API — see `../README.md`'s Status section for current state; this document remains the build order for what's still outstanding (mobile parity, v1.1+ modules).
 
 ## Why this scope
 
@@ -50,7 +50,7 @@ Moved out of v1 scope entirely, in rough sequence — see `roadmap.md` for the l
 - **KPI Dashboard** — custom KPIs, time-series tracking, shareable snapshots (REQ-08, REQ-09)
 - **Notifications** — in-app, push, email, digests (REQ-10)
 - **Team Management (advanced)** — Admin/Viewer roles, workspace settings (part of REQ-02)
-- **Task Management (advanced)** — sprints, velocity, sub-tasks, labels (REQ-05)
+- **Task Management (advanced)** — sub-tasks, labels (REQ-11)
 
 ## Out of scope for v1 (explicitly)
 

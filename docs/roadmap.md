@@ -1,10 +1,14 @@
 # Roadmap
 
-*Last updated: 2026-07-10.* This is the current snapshot of what FoundryHQ is building and why. For the prioritization framework and review cadence behind these decisions, see `../.ai/startup/roadmap.md`. For the reasoning behind the product bet itself, see `vision.md`.
+*Last updated: 2026-07-31.* This is the current snapshot of what FoundryHQ is building and why. For the prioritization framework and review cadence behind these decisions, see `../.ai/startup/roadmap.md`. For the reasoning behind the product bet itself, see `vision.md`.
 
 ## Shipped
 
-Nothing yet — `apps/` and `packages/` are empty scaffolding, no application code has been written. The feature descriptions in `../README.md#features` and `../PROJECT.md` describe the target state, not current state.
+- **Authentication** — register/login/logout, JWT access + refresh tokens, password reset via email — REQ-01 (OAuth still deferred to v1.1+)
+- **Workspace & Team** — create workspace, invite members, Owner/Member roles — REQ-02 (partial; Admin/Viewer and workspace switching still deferred to v1.1+)
+- **Task Management** — Kanban board, CRUD tasks, assign users, status/priority/due-date updates, sprint planning with velocity tracking — REQ-05, REQ-11
+
+`apps/mobile` is scaffolded (Expo + TypeScript) but has no screens yet. The CRM/Meeting Notes/OKRs/KPI Dashboard/Notifications feature descriptions in `../README.md#features` and `../PROJECT.md` still describe target state, not current state — those modules haven't started.
 
 ## Now (Version 1 — this month)
 

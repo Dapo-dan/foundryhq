@@ -13,8 +13,16 @@ function applyPatch(task: Task, variables: UpdateTaskVariables): Task {
     ...(variables.status !== undefined && { status: variables.status }),
     ...(variables.projectId !== undefined && { projectId: variables.projectId }),
     ...(variables.assigneeId !== undefined && { assigneeId: variables.assigneeId }),
-    // Checked last so it wins over assigneeId if both were somehow set.
+    ...(variables.sprintId !== undefined && { sprintId: variables.sprintId }),
+    ...(variables.priority !== undefined && { priority: variables.priority }),
+    ...(variables.storyPoints !== undefined && { storyPoints: variables.storyPoints }),
+    ...(variables.dueDate !== undefined && { dueDate: variables.dueDate }),
+    // Clear* flags are checked last so they win over their corresponding
+    // field above if both were somehow set on the same call.
     ...(variables.clearAssignee && { assigneeId: null }),
+    ...(variables.clearSprint && { sprintId: null }),
+    ...(variables.clearStoryPoints && { storyPoints: null }),
+    ...(variables.clearDueDate && { dueDate: null }),
   }
 }
 
