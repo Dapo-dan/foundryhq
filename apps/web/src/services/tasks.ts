@@ -1,5 +1,5 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api-client'
-import type { Task, TaskStatus } from '@foundryhq/shared-types'
+import type { Task, TaskPriority, TaskStatus } from '@foundryhq/shared-types'
 import { useWorkspaceStore } from '@/store/slices/workspace'
 
 // Reads the current workspace from the store rather than taking it as a
@@ -16,6 +16,7 @@ export interface TaskFilters {
   projectId?: string
   status?: TaskStatus
   assigneeId?: string
+  sprintId?: string
 }
 
 export function listTasks(filters: TaskFilters = {}) {
@@ -23,11 +24,22 @@ export function listTasks(filters: TaskFilters = {}) {
   if (filters.projectId) params.set('projectId', filters.projectId)
   if (filters.status) params.set('status', filters.status)
   if (filters.assigneeId) params.set('assigneeId', filters.assigneeId)
+  if (filters.sprintId) params.set('sprintId', filters.sprintId)
   const query = params.toString()
   return apiGet<Task[]>(`/workspaces/${requireWorkspaceId()}/tasks${query ? `?${query}` : ''}`)
 }
 
-export function createTask(input: { projectId: string; title: string; assigneeId?: string }) {
+export interface CreateTaskInput {
+  projectId: string
+  title: string
+  assigneeId?: string
+  sprintId?: string
+  priority?: TaskPriority
+  storyPoints?: number
+  dueDate?: string
+}
+
+export function createTask(input: CreateTaskInput) {
   return apiPost<Task>(`/workspaces/${requireWorkspaceId()}/tasks`, input)
 }
 
@@ -37,6 +49,11 @@ export interface UpdateTaskInput {
   status?: TaskStatus
   assigneeId?: string
   clearAssignee?: boolean
+  sprintId?: string
+  priority?: TaskPriority
+  storyPoints?: number
+  clearStoryPoints?: boolean
+  dueDate?: string
 }
 
 export function updateTask(taskId: string, input: UpdateTaskInput) {

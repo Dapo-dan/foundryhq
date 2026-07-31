@@ -1,4 +1,5 @@
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
+export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low'
 
 export interface Task {
   id: string
@@ -7,6 +8,10 @@ export interface Task {
   title: string
   status: TaskStatus
   assigneeId: string | null
+  sprintId: string | null
+  priority: TaskPriority
+  storyPoints: number | null
+  dueDate: string | null
   createdAt: string
   updatedAt: string
 }

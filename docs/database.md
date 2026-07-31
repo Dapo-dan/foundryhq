@@ -11,7 +11,7 @@ FoundryHQ uses PostgreSQL 16 via GORM. This document is split in two: **V1 Model
 
 ## V1 Models
 
-The four entities needed for the v1 usable loop — auth, workspace/team, and shared tasks (see `mvp.md`) — plus the join table that realizes the Users↔Workspaces membership.
+The five entities needed for the v1 usable loop — auth, workspace/team, shared tasks, and sprint planning with velocity (see `mvp.md`) — plus the join table that realizes the Users↔Workspaces membership.
 
 ### Users
 
@@ -88,12 +88,32 @@ The organizational unit tasks live under — a workspace can have many projects,
 | title | text | not null |
 | status | text | `todo`, `in_progress`, `done` — default `todo` |
 | assignee_id | uuid | FK → `users.id`, nullable, `ON DELETE SET NULL` |
+| sprint_id | uuid | FK → `sprints.id`, nullable, `ON DELETE SET NULL` — null means the task is in the backlog, not any sprint |
+| priority | text | `urgent`, `high`, `medium`, `low` — default `medium` |
+| story_points | integer | nullable; `>= 0` when set |
+| due_date | date | nullable |
 | created_at / updated_at / deleted_at | timestamptz | soft-deleted |
 
 **Relationships**
 - Belongs to one `project`.
 - Belongs to one `workspace` — **denormalized**: `workspace_id` is always equal to the owning project's `workspace_id`. This is a deliberate trade-off, not an oversight — it keeps the "list tasks in workspace X" query (the most common one on the Kanban board) a single indexed lookup instead of a join through `projects`, and keeps workspace-scoping enforcement at the repository layer uniform across every table (see Conventions above). The invariant (`tasks.workspace_id == projects.workspace_id`) is enforced in the usecase layer when a task is created or its `project_id` changes — Postgres has no native way to cross-validate two FK columns without a trigger, and one isn't warranted for this.
 - Optionally belongs to one `user` as assignee.
+- Optionally belongs to one `sprint` — `ON DELETE SET NULL` mirrors `assignee_id`'s pattern: deleting a sprint returns its tasks to the backlog rather than deleting them.
+
+### Sprints
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| workspace_id | uuid | FK → `workspaces.id`, `ON DELETE CASCADE`, not null |
+| name | text | not null |
+| start_date / end_date | date | not null; `end_date >= start_date` (CHECK, and validated up front in the usecase for a clean field error instead of a raw constraint violation) |
+| created_at / updated_at | timestamptz | |
+
+**Relationships**
+- Belongs to one `workspace`.
+- Has many `tasks` — a task is in at most one sprint at a time (`tasks.sprint_id`).
+- **Velocity** — sum of `story_points` for tasks with `status = 'done'` and `updated_at` within `[start_date, end_date]` — is computed at query time, not stored (see `../.ai/business-analysis/acceptance-criteria.md`). The only timestamp available to approximate "when a task moved to Done" is `updated_at` (there's no separate `status_changed_at` column) — an unrelated edit to a done task after the sprint closes would incorrectly exclude it, and an edit within range would incorrectly include it. This is an accepted trade-off, not a bug to silently fix with a new column.
 
 ## Entity Relationship Diagram (V1)
 
@@ -140,22 +160,37 @@ erDiagram
         text title
         text status
         uuid assignee_id FK
+        uuid sprint_id FK
+        text priority
+        integer story_points
+        date due_date
         timestamptz created_at
         timestamptz updated_at
         timestamptz deleted_at
+    }
+    SPRINTS {
+        uuid id PK
+        uuid workspace_id FK
+        text name
+        date start_date
+        date end_date
+        timestamptz created_at
+        timestamptz updated_at
     }
 
     WORKSPACES ||--o{ WORKSPACE_MEMBERS : has
     USERS ||--o{ WORKSPACE_MEMBERS : joins
     WORKSPACES ||--o{ PROJECTS : scopes
     WORKSPACES ||--o{ TASKS : scopes
+    WORKSPACES ||--o{ SPRINTS : scopes
     PROJECTS ||--o{ TASKS : contains
     USERS ||--o{ TASKS : assigned_to
+    SPRINTS ||--o{ TASKS : contains
 ```
 
 ## Planned Schema (v1.1+)
 
-Not yet implemented — reference for modules deferred past v1 (see `mvp.md`). `tasks` itself also grows here: `sprint_id`, `priority`, `story_points`, and `due_date` are added to the existing table by a later migration, not a new one.
+Not yet implemented — reference for modules deferred past v1 (see `mvp.md`).
 
 ### `contacts` / `companies`
 | Column | Type | Notes |
@@ -188,19 +223,6 @@ Not yet implemented — reference for modules deferred past v1 (see `mvp.md`). `
 | body | text | |
 | logged_by | uuid | FK → users |
 | created_at | timestamptz | activities are immutable — no `updated_at` |
-
-### `sprints` (+ new `tasks` columns)
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid | PK |
-| workspace_id | uuid | FK → workspaces |
-| name | text | |
-| start_date / end_date | date | |
-| created_at / updated_at | timestamptz | |
-
-`tasks` gains: `sprint_id` (FK → sprints, nullable — null = backlog), `priority` (`urgent`, `high`, `medium`, `low`), `story_points` (int, nullable), `due_date` (date, nullable).
-
-Velocity (sum of `story_points` for tasks with `status = 'done'` and `updated_at` within `[start_date, end_date]`) is computed at query time, not stored — see the rule in `../.ai/business-analysis/acceptance-criteria.md`.
 
 ### `meetings` / `action_items`
 | Column | Type | Notes |

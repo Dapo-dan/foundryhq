@@ -1,6 +1,15 @@
 import { useSortable } from '@dnd-kit/sortable'
-import { Badge } from '@/components/ui/badge'
-import type { Task } from '@foundryhq/shared-types'
+import { format } from 'date-fns'
+import { Badge, type badgeVariants } from '@/components/ui/badge'
+import type { Task, TaskPriority } from '@foundryhq/shared-types'
+import type { VariantProps } from 'class-variance-authority'
+
+const PRIORITY_VARIANT: Record<TaskPriority, VariantProps<typeof badgeVariants>['variant']> = {
+  urgent: 'destructive',
+  high: 'default',
+  medium: 'secondary',
+  low: 'outline',
+}
 
 interface TaskCardProps {
   task: Task
@@ -27,7 +36,16 @@ export function TaskCard({ task, projectName }: TaskCardProps) {
       className="flex cursor-grab flex-col gap-2 rounded-lg border border-border bg-card p-3 text-sm active:cursor-grabbing"
     >
       <p className="font-medium text-foreground">{task.title}</p>
-      {projectName && <Badge variant="secondary">{projectName}</Badge>}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {projectName && <Badge variant="secondary">{projectName}</Badge>}
+        <Badge variant={PRIORITY_VARIANT[task.priority]}>{task.priority}</Badge>
+        {task.storyPoints != null && <Badge variant="outline">{task.storyPoints} pts</Badge>}
+      </div>
+      {task.dueDate && (
+        <p className="text-xs text-muted-foreground">
+          Due {format(new Date(`${task.dueDate}T00:00:00`), 'MMM d')}
+        </p>
+      )}
     </div>
   )
 }

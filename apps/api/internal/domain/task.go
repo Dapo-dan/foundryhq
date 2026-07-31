@@ -22,6 +22,17 @@ const (
 	StatusDone       TaskStatus = "done"
 )
 
+// TaskPriority is one of the values allowed by the tasks.priority CHECK
+// constraint.
+type TaskPriority string
+
+const (
+	PriorityUrgent TaskPriority = "urgent"
+	PriorityHigh   TaskPriority = "high"
+	PriorityMedium TaskPriority = "medium"
+	PriorityLow    TaskPriority = "low"
+)
+
 // Task belongs to exactly one project and (denormalized) the workspace that
 // project belongs to — see docs/database.md's Tasks section for why
 // WorkspaceID is stored directly rather than derived through ProjectID.
@@ -33,8 +44,13 @@ type Task struct {
 	Status      TaskStatus
 	// AssigneeID is nil for an unassigned task.
 	AssigneeID *uuid.UUID
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	// SprintID is nil for a backlog task (not in any sprint).
+	SprintID    *uuid.UUID
+	Priority    TaskPriority
+	StoryPoints *int
+	DueDate     *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 	// DeletedAt is nil unless the task has been soft-deleted.
 	DeletedAt *time.Time
 }
@@ -45,6 +61,7 @@ type TaskFilter struct {
 	ProjectID  *uuid.UUID
 	Status     *TaskStatus
 	AssigneeID *uuid.UUID
+	SprintID   *uuid.UUID
 }
 
 // TaskRepository persists and retrieves Task entities.
@@ -54,4 +71,10 @@ type TaskRepository interface {
 	ListByWorkspaceID(ctx context.Context, workspaceID uuid.UUID, filter TaskFilter) ([]*Task, error)
 	Update(ctx context.Context, task *Task) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	// SumStoryPointsForSprint returns the sum of story_points for tasks in
+	// sprintID with status = done and updated_at within [startDate, endDate]
+	// (inclusive of the entire endDate calendar day) — the velocity
+	// computation behind SprintUsecase.GetVelocity. Computed at query time,
+	// never stored (docs/database.md's Sprints section).
+	SumStoryPointsForSprint(ctx context.Context, sprintID uuid.UUID, startDate, endDate time.Time) (int, error)
 }

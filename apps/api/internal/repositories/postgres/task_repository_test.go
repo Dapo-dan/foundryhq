@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -194,6 +195,168 @@ func TestTaskRepository_Delete_NotFound(t *testing.T) {
 		err := repo.Delete(context.Background(), uuid.New())
 		if !errors.Is(err, domain.ErrTaskNotFound) {
 			t.Errorf("Delete() error = %v, want %v", err, domain.ErrTaskNotFound)
+		}
+	})
+}
+
+func TestTaskRepository_Create_DefaultsPriorityToMedium(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		workspace, project := newTestTaskProject(t, tx)
+		repo := NewTaskRepository(tx)
+		ctx := context.Background()
+
+		task := &domain.Task{WorkspaceID: workspace.ID, ProjectID: project.ID, Title: "Ship it"}
+		if err := repo.Create(ctx, task); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+		if task.Priority != domain.PriorityMedium {
+			t.Errorf("Priority = %v, want default %v", task.Priority, domain.PriorityMedium)
+		}
+	})
+}
+
+func TestTaskRepository_Update_SprintPriorityStoryPointsDueDate(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		workspace, project := newTestTaskProject(t, tx)
+		userRepo := NewUserRepository(tx)
+		sprintRepo := NewSprintRepository(tx)
+		repo := NewTaskRepository(tx)
+		ctx := context.Background()
+
+		owner := newTestUser()
+		if err := userRepo.Create(ctx, owner); err != nil {
+			t.Fatalf("creating user: %v", err)
+		}
+		sprint := &domain.Sprint{
+			WorkspaceID: workspace.ID, Name: "Sprint 1",
+			StartDate: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
+		}
+		if err := sprintRepo.Create(ctx, sprint); err != nil {
+			t.Fatalf("creating sprint: %v", err)
+		}
+
+		task := &domain.Task{WorkspaceID: workspace.ID, ProjectID: project.ID, Title: "Ship it"}
+		if err := repo.Create(ctx, task); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		points := 5
+		dueDate := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+		task.SprintID = &sprint.ID
+		task.Priority = domain.PriorityUrgent
+		task.StoryPoints = &points
+		task.DueDate = &dueDate
+		if err := repo.Update(ctx, task); err != nil {
+			t.Fatalf("Update() error = %v", err)
+		}
+
+		got, err := repo.GetByID(ctx, task.ID)
+		if err != nil {
+			t.Fatalf("GetByID() error = %v", err)
+		}
+		if got.SprintID == nil || *got.SprintID != sprint.ID {
+			t.Errorf("SprintID = %v, want %v", got.SprintID, sprint.ID)
+		}
+		if got.Priority != domain.PriorityUrgent {
+			t.Errorf("Priority = %v, want %v", got.Priority, domain.PriorityUrgent)
+		}
+		if got.StoryPoints == nil || *got.StoryPoints != points {
+			t.Errorf("StoryPoints = %v, want %d", got.StoryPoints, points)
+		}
+		if got.DueDate == nil || !got.DueDate.Equal(dueDate) {
+			t.Errorf("DueDate = %v, want %v", got.DueDate, dueDate)
+		}
+	})
+}
+
+func TestTaskRepository_ListByWorkspaceID_FilterBySprint(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		workspace, project := newTestTaskProject(t, tx)
+		sprintRepo := NewSprintRepository(tx)
+		repo := NewTaskRepository(tx)
+		ctx := context.Background()
+
+		sprint := &domain.Sprint{
+			WorkspaceID: workspace.ID, Name: "Sprint 1",
+			StartDate: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+			EndDate:   time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC),
+		}
+		if err := sprintRepo.Create(ctx, sprint); err != nil {
+			t.Fatalf("creating sprint: %v", err)
+		}
+
+		inSprint := &domain.Task{WorkspaceID: workspace.ID, ProjectID: project.ID, Title: "In sprint", SprintID: &sprint.ID}
+		if err := repo.Create(ctx, inSprint); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+		backlog := &domain.Task{WorkspaceID: workspace.ID, ProjectID: project.ID, Title: "Backlog"}
+		if err := repo.Create(ctx, backlog); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		got, err := repo.ListByWorkspaceID(ctx, workspace.ID, domain.TaskFilter{SprintID: &sprint.ID})
+		if err != nil {
+			t.Fatalf("ListByWorkspaceID() error = %v", err)
+		}
+		if len(got) != 1 || got[0].ID != inSprint.ID {
+			t.Errorf("filtering by sprintId: got %d tasks, want just the in-sprint task", len(got))
+		}
+	})
+}
+
+func TestTaskRepository_SumStoryPointsForSprint(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		workspace, project := newTestTaskProject(t, tx)
+		sprintRepo := NewSprintRepository(tx)
+		repo := NewTaskRepository(tx)
+		ctx := context.Background()
+
+		startDate := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+		endDate := time.Date(2026, 8, 14, 0, 0, 0, 0, time.UTC)
+		sprint := &domain.Sprint{WorkspaceID: workspace.ID, Name: "Sprint 1", StartDate: startDate, EndDate: endDate}
+		if err := sprintRepo.Create(ctx, sprint); err != nil {
+			t.Fatalf("creating sprint: %v", err)
+		}
+
+		withinRangePoints := 5
+		withinRange := &domain.Task{WorkspaceID: workspace.ID, ProjectID: project.ID, Title: "Done in range", SprintID: &sprint.ID, Status: domain.StatusDone, StoryPoints: &withinRangePoints}
+		if err := repo.Create(ctx, withinRange); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+		// created_at/updated_at default to the real now() — which isn't
+		// necessarily inside this sprint's (fixed, possibly future/past)
+		// date range, so it's stamped explicitly here rather than relying
+		// on Create's timing to coincidentally land in range.
+		if err := tx.Exec(`UPDATE tasks SET updated_at = ? WHERE id = ?`, startDate.AddDate(0, 0, 5), withinRange.ID).Error; err != nil {
+			t.Fatalf("dating updated_at: %v", err)
+		}
+
+		notDonePoints := 21
+		notDone := &domain.Task{WorkspaceID: workspace.ID, ProjectID: project.ID, Title: "Still in progress", SprintID: &sprint.ID, Status: domain.StatusInProgress, StoryPoints: &notDonePoints}
+		if err := repo.Create(ctx, notDone); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		// Force this row's updated_at outside the sprint's range, after
+		// insert, to test the boundary without waiting real time —
+		// repo.Update() would stamp its own now(), so this bypasses it via
+		// a raw SQL update.
+		doneOutsideRangePoints := 8
+		doneOutsideRange := &domain.Task{WorkspaceID: workspace.ID, ProjectID: project.ID, Title: "Done after sprint closed", SprintID: &sprint.ID, Status: domain.StatusDone, StoryPoints: &doneOutsideRangePoints}
+		if err := repo.Create(ctx, doneOutsideRange); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+		if err := tx.Exec(`UPDATE tasks SET updated_at = ? WHERE id = ?`, endDate.AddDate(0, 0, 5), doneOutsideRange.ID).Error; err != nil {
+			t.Fatalf("backdating updated_at: %v", err)
+		}
+
+		velocity, err := repo.SumStoryPointsForSprint(ctx, sprint.ID, startDate, endDate)
+		if err != nil {
+			t.Fatalf("SumStoryPointsForSprint() error = %v", err)
+		}
+		if velocity != withinRangePoints {
+			t.Errorf("SumStoryPointsForSprint() = %d, want %d (only the done-in-range task)", velocity, withinRangePoints)
 		}
 	})
 }

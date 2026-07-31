@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -17,19 +18,24 @@ import (
 type TaskUsecase struct {
 	taskRepo    domain.TaskRepository
 	projectRepo domain.ProjectRepository
+	sprintRepo  domain.SprintRepository
 	memberRepo  domain.WorkspaceMemberRepository
 }
 
 // NewTaskUsecase constructs a TaskUsecase.
-func NewTaskUsecase(taskRepo domain.TaskRepository, projectRepo domain.ProjectRepository, memberRepo domain.WorkspaceMemberRepository) *TaskUsecase {
-	return &TaskUsecase{taskRepo: taskRepo, projectRepo: projectRepo, memberRepo: memberRepo}
+func NewTaskUsecase(taskRepo domain.TaskRepository, projectRepo domain.ProjectRepository, sprintRepo domain.SprintRepository, memberRepo domain.WorkspaceMemberRepository) *TaskUsecase {
+	return &TaskUsecase{taskRepo: taskRepo, projectRepo: projectRepo, sprintRepo: sprintRepo, memberRepo: memberRepo}
 }
 
 // CreateTaskInput carries Create's required and optional fields.
 type CreateTaskInput struct {
-	ProjectID  uuid.UUID
-	Title      string
-	AssigneeID *uuid.UUID
+	ProjectID   uuid.UUID
+	Title       string
+	AssigneeID  *uuid.UUID
+	SprintID    *uuid.UUID
+	Priority    *domain.TaskPriority
+	StoryPoints *int
+	DueDate     *time.Time
 }
 
 // UpdateTaskInput carries the optional fields Update can change. A nil
@@ -43,6 +49,14 @@ type UpdateTaskInput struct {
 	// because AssigneeID's own nil already means "leave unchanged", so a
 	// plain nil can't also mean "unassign".
 	ClearAssignee bool
+	SprintID      *uuid.UUID
+	Priority      *domain.TaskPriority
+	StoryPoints   *int
+	// ClearStoryPoints clears story points regardless of StoryPoints — same
+	// rationale as ClearAssignee (a plain nil already means "leave
+	// unchanged", so clearing needs its own explicit signal).
+	ClearStoryPoints bool
+	DueDate          *time.Time
 }
 
 // Create makes a new task in workspaceID, gated on callerID being a member
@@ -68,6 +82,21 @@ func (u *TaskUsecase) Create(ctx context.Context, callerID, workspaceID uuid.UUI
 			return nil, err
 		}
 	}
+	if input.SprintID != nil {
+		if err := u.requireSprintInWorkspace(ctx, workspaceID, *input.SprintID); err != nil {
+			return nil, err
+		}
+	}
+	priority := domain.PriorityMedium
+	if input.Priority != nil {
+		if !isValidTaskPriority(*input.Priority) {
+			return nil, apperrors.Validation("priority", "priority must be one of: urgent, high, medium, low")
+		}
+		priority = *input.Priority
+	}
+	if input.StoryPoints != nil && *input.StoryPoints < 0 {
+		return nil, apperrors.Validation("storyPoints", "story points must be zero or greater")
+	}
 
 	task := &domain.Task{
 		WorkspaceID: workspaceID,
@@ -75,6 +104,10 @@ func (u *TaskUsecase) Create(ctx context.Context, callerID, workspaceID uuid.UUI
 		Title:       title,
 		Status:      domain.StatusTodo,
 		AssigneeID:  input.AssigneeID,
+		SprintID:    input.SprintID,
+		Priority:    priority,
+		StoryPoints: input.StoryPoints,
+		DueDate:     input.DueDate,
 	}
 	if err := u.taskRepo.Create(ctx, task); err != nil {
 		return nil, apperrors.Internal(fmt.Errorf("creating task: %w", err))
@@ -144,6 +177,29 @@ func (u *TaskUsecase) Update(ctx context.Context, callerID, workspaceID, taskID 
 			return nil, err
 		}
 		task.AssigneeID = input.AssigneeID
+	}
+	if input.SprintID != nil && (task.SprintID == nil || *input.SprintID != *task.SprintID) {
+		if err := u.requireSprintInWorkspace(ctx, workspaceID, *input.SprintID); err != nil {
+			return nil, err
+		}
+		task.SprintID = input.SprintID
+	}
+	if input.Priority != nil {
+		if !isValidTaskPriority(*input.Priority) {
+			return nil, apperrors.Validation("priority", "priority must be one of: urgent, high, medium, low")
+		}
+		task.Priority = *input.Priority
+	}
+	if input.ClearStoryPoints {
+		task.StoryPoints = nil
+	} else if input.StoryPoints != nil {
+		if *input.StoryPoints < 0 {
+			return nil, apperrors.Validation("storyPoints", "story points must be zero or greater")
+		}
+		task.StoryPoints = input.StoryPoints
+	}
+	if input.DueDate != nil {
+		task.DueDate = input.DueDate
 	}
 
 	if err := u.taskRepo.Update(ctx, task); err != nil {
@@ -233,6 +289,23 @@ func (u *TaskUsecase) requireProjectInWorkspace(ctx context.Context, workspaceID
 	return nil
 }
 
+// requireSprintInWorkspace returns apperrors.Validation unless sprintID
+// exists and belongs to workspaceID — same invariant as
+// requireProjectInWorkspace, applied to sprint assignment.
+func (u *TaskUsecase) requireSprintInWorkspace(ctx context.Context, workspaceID, sprintID uuid.UUID) error {
+	sprint, err := u.sprintRepo.GetByID(ctx, sprintID)
+	if err != nil {
+		if errors.Is(err, domain.ErrSprintNotFound) {
+			return apperrors.Validation("sprintId", "sprint not found")
+		}
+		return apperrors.Internal(fmt.Errorf("getting sprint: %w", err))
+	}
+	if sprint.WorkspaceID != workspaceID {
+		return apperrors.Validation("sprintId", "sprint does not belong to this workspace")
+	}
+	return nil
+}
+
 // getScoped returns taskID, but only if it actually belongs to
 // workspaceID — otherwise it's treated as not found, exactly like a task
 // that doesn't exist at all (same rationale as ProjectUsecase.getScoped).
@@ -253,6 +326,15 @@ func (u *TaskUsecase) getScoped(ctx context.Context, workspaceID, taskID uuid.UU
 func isValidTaskStatus(s domain.TaskStatus) bool {
 	switch s {
 	case domain.StatusTodo, domain.StatusInProgress, domain.StatusDone:
+		return true
+	default:
+		return false
+	}
+}
+
+func isValidTaskPriority(p domain.TaskPriority) bool {
+	switch p {
+	case domain.PriorityUrgent, domain.PriorityHigh, domain.PriorityMedium, domain.PriorityLow:
 		return true
 	default:
 		return false

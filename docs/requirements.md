@@ -156,7 +156,7 @@ The system shall let a user create, edit, delete, and assign tasks within a work
 | REQ-02 | Authentication / Team Management | All | Planned — v1 (Owner/Member only); Admin/Viewer roles deferred to v1.1+ |
 | REQ-03 | CRM | Early Sales Rep | Planned — v1.1+ |
 | REQ-04 | CRM | Early Sales Rep | Planned — v1.1+ |
-| REQ-05 | Task Management | Product Engineer | Planned — v1.1+ (depends on REQ-11) |
+| REQ-05 | Task Management | Product Engineer | Planned — v1 (see `mvp.md`; depends on REQ-11) |
 | REQ-06 | Meeting Notes | Founder-Operator, Product Engineer | Planned — v1.1+ |
 | REQ-07 | Goal Tracking (OKRs) | Founder-Operator, Product Engineer | Planned — v1.1+ |
 | REQ-08 | KPI Dashboard | Founder-Operator, Investor/Advisor | Planned — v1.1+ |

@@ -147,6 +147,7 @@ func main() {
 	taskUsecase := usecases.NewTaskUsecase(
 		postgres.NewTaskRepository(db),
 		postgres.NewProjectRepository(db),
+		postgres.NewSprintRepository(db),
 		postgres.NewWorkspaceMemberRepository(db),
 	)
 	taskHandler := handlers.NewTaskHandler(taskUsecase)
@@ -157,6 +158,19 @@ func main() {
 	tasks.GET("/:taskId", taskHandler.Get)
 	tasks.PATCH("/:taskId", taskHandler.Update)
 	tasks.DELETE("/:taskId", taskHandler.Delete)
+
+	sprintUsecase := usecases.NewSprintUsecase(
+		postgres.NewSprintRepository(db),
+		postgres.NewTaskRepository(db),
+		postgres.NewWorkspaceMemberRepository(db),
+	)
+	sprintHandler := handlers.NewSprintHandler(sprintUsecase)
+
+	sprints := protected.Group("/workspaces/:workspaceId/sprints")
+	sprints.POST("", sprintHandler.Create)
+	sprints.GET("", sprintHandler.List)
+	sprints.GET("/:sprintId", sprintHandler.Get)
+	sprints.GET("/:sprintId/velocity", sprintHandler.Velocity)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,

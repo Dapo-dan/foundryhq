@@ -57,10 +57,30 @@ func (m *mockTaskRepo) ListByWorkspaceID(_ context.Context, workspaceID uuid.UUI
 		if filter.AssigneeID != nil && (t.AssigneeID == nil || *t.AssigneeID != *filter.AssigneeID) {
 			continue
 		}
+		if filter.SprintID != nil && (t.SprintID == nil || *t.SprintID != *filter.SprintID) {
+			continue
+		}
 		cp := *t
 		result = append(result, &cp)
 	}
 	return result, nil
+}
+
+func (m *mockTaskRepo) SumStoryPointsForSprint(_ context.Context, sprintID uuid.UUID, startDate, endDate time.Time) (int, error) {
+	sum := 0
+	for _, t := range m.byID {
+		if t.DeletedAt != nil || t.SprintID == nil || *t.SprintID != sprintID || t.Status != domain.StatusDone {
+			continue
+		}
+		exclusiveEnd := endDate.AddDate(0, 0, 1)
+		if t.UpdatedAt.Before(startDate) || !t.UpdatedAt.Before(exclusiveEnd) {
+			continue
+		}
+		if t.StoryPoints != nil {
+			sum += *t.StoryPoints
+		}
+	}
+	return sum, nil
 }
 
 func (m *mockTaskRepo) Update(_ context.Context, task *domain.Task) error {
@@ -85,11 +105,17 @@ func (m *mockTaskRepo) Delete(_ context.Context, id uuid.UUID) error {
 }
 
 func newTestTaskUsecase() (*TaskUsecase, *mockTaskRepo, *mockProjectRepo, *mockWorkspaceMemberRepo) {
+	u, tasks, projects, _, members := newTestTaskUsecaseWithSprints()
+	return u, tasks, projects, members
+}
+
+func newTestTaskUsecaseWithSprints() (*TaskUsecase, *mockTaskRepo, *mockProjectRepo, *mockSprintRepo, *mockWorkspaceMemberRepo) {
 	tasks := newMockTaskRepo()
 	members := newMockWorkspaceMemberRepo()
 	projects := newMockProjectRepo()
-	u := NewTaskUsecase(tasks, projects, members)
-	return u, tasks, projects, members
+	sprints := newMockSprintRepo()
+	u := NewTaskUsecase(tasks, projects, sprints, members)
+	return u, tasks, projects, sprints, members
 }
 
 // seedProject inserts a project directly into projects (bypassing
@@ -359,6 +385,98 @@ func TestTaskDelete_Success(t *testing.T) {
 	appErr := asAppError(t, err)
 	if appErr.Code != apperrors.CodeNotFound {
 		t.Errorf("Code = %v, want %v — a deleted task should read as not found", appErr.Code, apperrors.CodeNotFound)
+	}
+}
+
+func TestTaskCreate_SprintNotInWorkspace(t *testing.T) {
+	u, _, projects, sprints, members := newTestTaskUsecaseWithSprints()
+	workspaceA, workspaceB, callerID := uuid.New(), uuid.New(), uuid.New()
+	seedMembership(t, members, workspaceA, callerID)
+	project := seedProject(t, projects, workspaceA)
+	sprintInB := &domain.Sprint{WorkspaceID: workspaceB, Name: "Other sprint"}
+	if err := sprints.Create(context.Background(), sprintInB); err != nil {
+		t.Fatalf("seeding sprint: %v", err)
+	}
+
+	_, err := u.Create(context.Background(), callerID, workspaceA, CreateTaskInput{
+		ProjectID: project.ID, Title: "Ship it", SprintID: &sprintInB.ID,
+	})
+	appErr := asAppError(t, err)
+	if appErr.Code != apperrors.CodeValidation {
+		t.Errorf("Code = %v, want %v", appErr.Code, apperrors.CodeValidation)
+	}
+	if appErr.Field != "sprintId" {
+		t.Errorf("Field = %q, want %q", appErr.Field, "sprintId")
+	}
+}
+
+func TestTaskCreate_InvalidPriority(t *testing.T) {
+	u, _, projects, members := newTestTaskUsecase()
+	workspaceID, callerID := uuid.New(), uuid.New()
+	seedMembership(t, members, workspaceID, callerID)
+	project := seedProject(t, projects, workspaceID)
+
+	bogus := domain.TaskPriority("critical")
+	_, err := u.Create(context.Background(), callerID, workspaceID, CreateTaskInput{
+		ProjectID: project.ID, Title: "Ship it", Priority: &bogus,
+	})
+	appErr := asAppError(t, err)
+	if appErr.Code != apperrors.CodeValidation {
+		t.Errorf("Code = %v, want %v", appErr.Code, apperrors.CodeValidation)
+	}
+}
+
+func TestTaskCreate_NegativeStoryPoints(t *testing.T) {
+	u, _, projects, members := newTestTaskUsecase()
+	workspaceID, callerID := uuid.New(), uuid.New()
+	seedMembership(t, members, workspaceID, callerID)
+	project := seedProject(t, projects, workspaceID)
+
+	negative := -1
+	_, err := u.Create(context.Background(), callerID, workspaceID, CreateTaskInput{
+		ProjectID: project.ID, Title: "Ship it", StoryPoints: &negative,
+	})
+	appErr := asAppError(t, err)
+	if appErr.Code != apperrors.CodeValidation {
+		t.Errorf("Code = %v, want %v", appErr.Code, apperrors.CodeValidation)
+	}
+}
+
+func TestTaskCreate_DefaultsToMediumPriority(t *testing.T) {
+	u, _, projects, members := newTestTaskUsecase()
+	workspaceID, callerID := uuid.New(), uuid.New()
+	seedMembership(t, members, workspaceID, callerID)
+	project := seedProject(t, projects, workspaceID)
+
+	task, err := u.Create(context.Background(), callerID, workspaceID, CreateTaskInput{ProjectID: project.ID, Title: "Ship it"})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if task.Priority != domain.PriorityMedium {
+		t.Errorf("Priority = %v, want %v", task.Priority, domain.PriorityMedium)
+	}
+}
+
+func TestTaskUpdate_ClearStoryPoints(t *testing.T) {
+	u, _, projects, members := newTestTaskUsecase()
+	workspaceID, callerID := uuid.New(), uuid.New()
+	seedMembership(t, members, workspaceID, callerID)
+	project := seedProject(t, projects, workspaceID)
+
+	points := 5
+	task, err := u.Create(context.Background(), callerID, workspaceID, CreateTaskInput{
+		ProjectID: project.ID, Title: "Ship it", StoryPoints: &points,
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	updated, err := u.Update(context.Background(), callerID, workspaceID, task.ID, UpdateTaskInput{ClearStoryPoints: true})
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	if updated.StoryPoints != nil {
+		t.Errorf("StoryPoints = %v, want nil after ClearStoryPoints", updated.StoryPoints)
 	}
 }
 

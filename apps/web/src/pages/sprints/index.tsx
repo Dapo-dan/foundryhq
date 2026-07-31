@@ -1,7 +1,17 @@
+import { useState } from 'react'
 import { Zap, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { useSprints } from '@/hooks/useSprints'
+import { NewSprintDialog } from './components/NewSprintDialog'
+import { SprintCard } from './components/SprintCard'
 
 export function SprintsPage() {
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const { data: sprints, isPending } = useSprints()
+
+  const hasSprints = (sprints?.length ?? 0) > 0
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
@@ -11,19 +21,34 @@ export function SprintsPage() {
             Plan sprints and track your team's velocity.
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setDialogOpen(true)}>
           <Plus size={20} />
           New sprint
         </Button>
       </div>
-      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
-        <Zap size={24} className="text-muted-foreground" />
-        <h2 className="text-lg font-medium">No sprints yet</h2>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Create a sprint to start planning and assigning work.
-        </p>
-        <Button variant="outline">Create sprint</Button>
-      </div>
+
+      {isPending ? (
+        <p className="text-sm text-muted-foreground">Loading sprints…</p>
+      ) : hasSprints ? (
+        <div className="flex flex-col gap-2">
+          {sprints!.map((sprint) => (
+            <SprintCard key={sprint.id} sprint={sprint} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          icon={Zap}
+          title="No sprints yet"
+          description="Create a sprint to start planning and assigning work."
+          action={
+            <Button variant="outline" onClick={() => setDialogOpen(true)}>
+              Create sprint
+            </Button>
+          }
+        />
+      )}
+
+      <NewSprintDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   )
 }

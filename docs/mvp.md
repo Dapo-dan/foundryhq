@@ -29,8 +29,10 @@ The smallest usable loop is: a user can sign up, create a workspace, bring in th
 - [ ] CRUD tasks (create, edit, delete)
 - [ ] Assign users
 - [ ] Status updates
+- [ ] Priorities and due dates
+- [ ] Sprint planning with velocity tracking — see REQ-05
 
-*Deferred to v1.1+: sprints, velocity tracking, sub-tasks, labels, priorities, due dates — see REQ-05, REQ-11.*
+*Deferred to v1.1+: sub-tasks, labels — see REQ-11.*
 
 ### Mobile
 - [ ] Expo/React Native app scaffolded in `apps/mobile`, sharing types with web via `packages/shared-types`

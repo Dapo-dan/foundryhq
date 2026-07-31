@@ -13,6 +13,7 @@ import { DealPipelinePage } from '@/pages/crm/deal-pipeline'
 import { CompaniesPage } from '@/pages/crm/companies'
 import { ContactsPage } from '@/pages/crm/contacts'
 import { SprintsPage } from '@/pages/sprints'
+import { SprintDetailPage } from '@/pages/sprints/detail'
 import { MetricsPage } from '@/pages/kpis/metrics'
 import { ReportsPage } from '@/pages/kpis/reports'
 import { SignInPage } from '@/pages/auth/sign-in'
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'tasks', element: <TasksPage /> },
       { path: 'sprints', element: <SprintsPage /> },
+      { path: 'sprints/:sprintId', element: <SprintDetailPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'crm/deal-pipeline', element: <DealPipelinePage /> },
       { path: 'crm/companies', element: <CompaniesPage /> },

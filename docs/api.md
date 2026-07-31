@@ -75,10 +75,10 @@ Human-curated overview of FoundryHQ's REST API. This is the index — the genera
 | Method | Path | Description |
 |---|---|---|
 | GET / POST | `/workspaces/{id}/tasks` | List (optionally filtered by `projectId`/`status`/`assigneeId`) / create tasks |
-| GET / PATCH / DELETE | `/workspaces/{id}/tasks/{taskId}` | Read / update (title, project, status, assignee) / soft-delete a task |
-| GET / POST | `/sprints` | List / create sprints |
-| GET | `/sprints/{id}` | Sprint detail with tasks grouped by status |
-| GET | `/sprints/{id}/velocity` | Computed velocity for the sprint |
+| GET / PATCH / DELETE | `/workspaces/{id}/tasks/{taskId}` | Read / update (title, project, status, assignee, sprint, priority, story points, due date) / soft-delete a task |
+| GET / POST | `/workspaces/{id}/sprints` | List / create sprints |
+| GET | `/workspaces/{id}/sprints/{sprintId}` | Sprint detail with tasks grouped by status |
+| GET | `/workspaces/{id}/sprints/{sprintId}/velocity` | Computed velocity for the sprint |
 
 ### Meetings
 | Method | Path | Description |

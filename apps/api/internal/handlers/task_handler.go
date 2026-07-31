@@ -27,22 +27,31 @@ func NewTaskHandler(taskUsecase *usecases.TaskUsecase) *TaskHandler {
 }
 
 type createTaskRequest struct {
-	ProjectID  string  `json:"projectId" binding:"required"`
-	Title      string  `json:"title" binding:"required"`
-	AssigneeID *string `json:"assigneeId"`
+	ProjectID   string  `json:"projectId" binding:"required"`
+	Title       string  `json:"title" binding:"required"`
+	AssigneeID  *string `json:"assigneeId"`
+	SprintID    *string `json:"sprintId"`
+	Priority    *string `json:"priority"`
+	StoryPoints *int    `json:"storyPoints"`
+	DueDate     *string `json:"dueDate"`
 }
 
 // updateTaskRequest's pointer fields use nil-means-omitted for a partial
 // PATCH (same convention as updateWorkspaceRequest/updateProjectRequest).
-// ClearAssignee is a separate explicit flag because a raw JSON null for
-// assigneeId would bind to the same Go nil as the field being omitted
-// entirely — see usecases.UpdateTaskInput.ClearAssignee.
+// ClearAssignee/ClearStoryPoints are separate explicit flags because a raw
+// JSON null would bind to the same Go nil as the field being omitted
+// entirely — see usecases.UpdateTaskInput.ClearAssignee/ClearStoryPoints.
 type updateTaskRequest struct {
-	ProjectID     *string `json:"projectId"`
-	Title         *string `json:"title"`
-	Status        *string `json:"status"`
-	AssigneeID    *string `json:"assigneeId"`
-	ClearAssignee bool    `json:"clearAssignee"`
+	ProjectID        *string `json:"projectId"`
+	Title            *string `json:"title"`
+	Status           *string `json:"status"`
+	AssigneeID       *string `json:"assigneeId"`
+	ClearAssignee    bool    `json:"clearAssignee"`
+	SprintID         *string `json:"sprintId"`
+	Priority         *string `json:"priority"`
+	StoryPoints      *int    `json:"storyPoints"`
+	ClearStoryPoints bool    `json:"clearStoryPoints"`
+	DueDate          *string `json:"dueDate"`
 }
 
 type taskResponse struct {
@@ -52,6 +61,10 @@ type taskResponse struct {
 	Title       string  `json:"title"`
 	Status      string  `json:"status"`
 	AssigneeID  *string `json:"assigneeId"`
+	SprintID    *string `json:"sprintId"`
+	Priority    string  `json:"priority"`
+	StoryPoints *int    `json:"storyPoints"`
+	DueDate     *string `json:"dueDate"`
 	CreatedAt   string  `json:"createdAt"`
 	UpdatedAt   string  `json:"updatedAt"`
 }
@@ -63,12 +76,22 @@ func toTaskResponse(t *domain.Task) taskResponse {
 		ProjectID:   t.ProjectID.String(),
 		Title:       t.Title,
 		Status:      string(t.Status),
+		Priority:    string(t.Priority),
+		StoryPoints: t.StoryPoints,
 		CreatedAt:   t.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   t.UpdatedAt.Format(time.RFC3339),
 	}
 	if t.AssigneeID != nil {
 		id := t.AssigneeID.String()
 		resp.AssigneeID = &id
+	}
+	if t.SprintID != nil {
+		id := t.SprintID.String()
+		resp.SprintID = &id
+	}
+	if t.DueDate != nil {
+		dueDate := t.DueDate.Format(dateOnlyLayout)
+		resp.DueDate = &dueDate
 	}
 	return resp
 }
@@ -96,7 +119,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		return
 	}
 
-	input := usecases.CreateTaskInput{ProjectID: projectID, Title: req.Title}
+	input := usecases.CreateTaskInput{ProjectID: projectID, Title: req.Title, StoryPoints: req.StoryPoints}
 	if req.AssigneeID != nil {
 		assigneeID, err := uuid.Parse(*req.AssigneeID)
 		if err != nil {
@@ -104,6 +127,26 @@ func (h *TaskHandler) Create(c *gin.Context) {
 			return
 		}
 		input.AssigneeID = &assigneeID
+	}
+	if req.SprintID != nil {
+		sprintID, err := uuid.Parse(*req.SprintID)
+		if err != nil {
+			handleError(c, apperrors.Validation("sprintId", "invalid id"))
+			return
+		}
+		input.SprintID = &sprintID
+	}
+	if req.Priority != nil {
+		priority := domain.TaskPriority(*req.Priority)
+		input.Priority = &priority
+	}
+	if req.DueDate != nil {
+		dueDate, err := time.Parse(dateOnlyLayout, *req.DueDate)
+		if err != nil {
+			handleError(c, apperrors.Validation("dueDate", "must be a date in YYYY-MM-DD format"))
+			return
+		}
+		input.DueDate = &dueDate
 	}
 
 	task, err := h.taskUsecase.Create(c.Request.Context(), userID, workspaceID, input)
@@ -205,7 +248,12 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
-	input := usecases.UpdateTaskInput{Title: req.Title, ClearAssignee: req.ClearAssignee}
+	input := usecases.UpdateTaskInput{
+		Title:            req.Title,
+		ClearAssignee:    req.ClearAssignee,
+		StoryPoints:      req.StoryPoints,
+		ClearStoryPoints: req.ClearStoryPoints,
+	}
 	if req.ProjectID != nil {
 		id, err := uuid.Parse(*req.ProjectID)
 		if err != nil {
@@ -225,6 +273,26 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			return
 		}
 		input.AssigneeID = &id
+	}
+	if req.SprintID != nil {
+		id, err := uuid.Parse(*req.SprintID)
+		if err != nil {
+			handleError(c, apperrors.Validation("sprintId", "invalid id"))
+			return
+		}
+		input.SprintID = &id
+	}
+	if req.Priority != nil {
+		priority := domain.TaskPriority(*req.Priority)
+		input.Priority = &priority
+	}
+	if req.DueDate != nil {
+		dueDate, err := time.Parse(dateOnlyLayout, *req.DueDate)
+		if err != nil {
+			handleError(c, apperrors.Validation("dueDate", "must be a date in YYYY-MM-DD format"))
+			return
+		}
+		input.DueDate = &dueDate
 	}
 
 	task, err := h.taskUsecase.Update(c.Request.Context(), userID, workspaceID, taskID, input)

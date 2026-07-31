@@ -23,6 +23,10 @@ type taskModel struct {
 	Title       string         `gorm:"column:title"`
 	Status      string         `gorm:"column:status"`
 	AssigneeID  *uuid.UUID     `gorm:"column:assignee_id"`
+	SprintID    *uuid.UUID     `gorm:"column:sprint_id"`
+	Priority    string         `gorm:"column:priority"`
+	StoryPoints *int           `gorm:"column:story_points"`
+	DueDate     *time.Time     `gorm:"column:due_date;type:date"`
 	CreatedAt   time.Time      `gorm:"column:created_at"`
 	UpdatedAt   time.Time      `gorm:"column:updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"column:deleted_at;index"`
@@ -38,6 +42,10 @@ func (m taskModel) toDomain() *domain.Task {
 		Title:       m.Title,
 		Status:      domain.TaskStatus(m.Status),
 		AssigneeID:  m.AssigneeID,
+		SprintID:    m.SprintID,
+		Priority:    domain.TaskPriority(m.Priority),
+		StoryPoints: m.StoryPoints,
+		DueDate:     m.DueDate,
 		CreatedAt:   m.CreatedAt,
 		UpdatedAt:   m.UpdatedAt,
 	}
@@ -56,6 +64,10 @@ func taskModelFromDomain(t *domain.Task) *taskModel {
 		Title:       t.Title,
 		Status:      string(t.Status),
 		AssigneeID:  t.AssigneeID,
+		SprintID:    t.SprintID,
+		Priority:    string(t.Priority),
+		StoryPoints: t.StoryPoints,
+		DueDate:     t.DueDate,
 	}
 }
 
@@ -70,18 +82,22 @@ func NewTaskRepository(db *gorm.DB) *TaskRepository {
 }
 
 // Create inserts task, generating its ID and timestamps via the table's
-// column defaults. Status defaults to domain.StatusTodo if unset, matching
-// the column's own DEFAULT 'todo'.
+// column defaults. Status/Priority default to domain.StatusTodo/PriorityMedium
+// if unset, matching the columns' own DEFAULTs.
 func (r *TaskRepository) Create(ctx context.Context, task *domain.Task) error {
 	model := taskModelFromDomain(task)
 	if model.Status == "" {
 		model.Status = string(domain.StatusTodo)
+	}
+	if model.Priority == "" {
+		model.Priority = string(domain.PriorityMedium)
 	}
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
 		return fmt.Errorf("creating task: %w", err)
 	}
 	task.ID = model.ID
 	task.Status = domain.TaskStatus(model.Status)
+	task.Priority = domain.TaskPriority(model.Priority)
 	task.CreatedAt = model.CreatedAt
 	task.UpdatedAt = model.UpdatedAt
 	return nil
@@ -114,6 +130,9 @@ func (r *TaskRepository) ListByWorkspaceID(ctx context.Context, workspaceID uuid
 	if filter.AssigneeID != nil {
 		query = query.Where("assignee_id = ?", *filter.AssigneeID)
 	}
+	if filter.SprintID != nil {
+		query = query.Where("sprint_id = ?", *filter.SprintID)
+	}
 
 	var models []taskModel
 	if err := query.Order("created_at").Find(&models).Error; err != nil {
@@ -127,18 +146,23 @@ func (r *TaskRepository) ListByWorkspaceID(ctx context.Context, workspaceID uuid
 	return tasks, nil
 }
 
-// Update replaces task's project/title/status/assignee. Returns
-// domain.ErrTaskNotFound if no such (non-deleted) task exists.
+// Update replaces task's project/title/status/assignee/sprint/priority/
+// story points/due date. Returns domain.ErrTaskNotFound if no such
+// (non-deleted) task exists.
 func (r *TaskRepository) Update(ctx context.Context, task *domain.Task) error {
 	model := taskModelFromDomain(task)
 	result := r.db.WithContext(ctx).
 		Model(&taskModel{}).
 		Where("id = ?", task.ID).
 		Updates(map[string]any{
-			"project_id":  model.ProjectID,
-			"title":       model.Title,
-			"status":      model.Status,
-			"assignee_id": model.AssigneeID,
+			"project_id":   model.ProjectID,
+			"title":        model.Title,
+			"status":       model.Status,
+			"assignee_id":  model.AssigneeID,
+			"sprint_id":    model.SprintID,
+			"priority":     model.Priority,
+			"story_points": model.StoryPoints,
+			"due_date":     model.DueDate,
 		})
 	if result.Error != nil {
 		return fmt.Errorf("updating task %s: %w", task.ID, result.Error)
@@ -160,4 +184,23 @@ func (r *TaskRepository) Delete(ctx context.Context, id uuid.UUID) error {
 		return domain.ErrTaskNotFound
 	}
 	return nil
+}
+
+// SumStoryPointsForSprint returns the sum of story_points for done tasks in
+// sprintID whose updated_at falls within [startDate, endDate] — the end
+// bound is exclusive of the *next* day so the entirety of endDate's
+// calendar day counts, matching docs/database.md's closed date-range
+// wording rather than a literal timestamp boundary at midnight.
+func (r *TaskRepository) SumStoryPointsForSprint(ctx context.Context, sprintID uuid.UUID, startDate, endDate time.Time) (int, error) {
+	var sum int
+	err := r.db.WithContext(ctx).
+		Model(&taskModel{}).
+		Select("COALESCE(SUM(story_points), 0)").
+		Where("sprint_id = ? AND status = ? AND updated_at >= ? AND updated_at < ?",
+			sprintID, string(domain.StatusDone), startDate, endDate.AddDate(0, 0, 1)).
+		Scan(&sum).Error
+	if err != nil {
+		return 0, fmt.Errorf("summing story points for sprint %s: %w", sprintID, err)
+	}
+	return sum, nil
 }

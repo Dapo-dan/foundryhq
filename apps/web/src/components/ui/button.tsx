@@ -55,42 +55,60 @@ const buttonVariants = cva(
 
 // This is a normal React component (a function returning JSX), but with a
 // few patterns you'll see constantly in real component libraries:
-function Button({
-  // Destructuring the props object pulls out each named prop, and `= "..."`
-  // gives it a default value when the caller doesn't pass one.
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  // `...props` ("rest syntax") collects every *other* prop the caller passed
-  // (onClick, disabled, type, etc.) into one object, so we don't have to
-  // list every possible <button> attribute by hand — see the spread below.
-  ...props
-}: React.ComponentProps<"button"> &          // all the normal <button> props
-  VariantProps<typeof buttonVariants> & {    // + "variant" and "size" from cva
-    asChild?: boolean
-  }) {
-  // asChild is a common shadcn/Radix pattern: normally this renders a real
-  // <button>, but if a caller passes asChild (e.g. to make a <Link> look
-  // like a button), Slot.Root instead merges these props onto whatever
-  // single child element is passed in, rather than wrapping it in a <button>.
-  const Comp = asChild ? Slot.Root : "button"
+//
+// forwardRef (rather than a plain function component) because Radix's Slot
+// clones a ref onto asChild's child — needed e.g. by PopoverTrigger/
+// PopperAnchor to measure this button's position for content placement. A
+// plain function component can't accept that ref: React drops it silently
+// (with a dev-mode warning) and Popper falls back to a bad position, e.g.
+// rendering the popover content off-screen (same class of fix as
+// DialogOverlay/DialogContent in dialog.tsx).
+const Button = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<"button"> &          // all the normal <button> props
+    VariantProps<typeof buttonVariants> & { // + "variant" and "size" from cva
+      asChild?: boolean
+    }
+>(
+  (
+    {
+      // Destructuring the props object pulls out each named prop, and `= "..."`
+      // gives it a default value when the caller doesn't pass one.
+      className,
+      variant = "default",
+      size = "default",
+      asChild = false,
+      // `...props` ("rest syntax") collects every *other* prop the caller passed
+      // (onClick, disabled, type, etc.) into one object, so we don't have to
+      // list every possible <button> attribute by hand — see the spread below.
+      ...props
+    },
+    ref
+  ) => {
+    // asChild is a common shadcn/Radix pattern: normally this renders a real
+    // <button>, but if a caller passes asChild (e.g. to make a <Link> look
+    // like a button), Slot.Root instead merges these props onto whatever
+    // single child element is passed in, rather than wrapping it in a <button>.
+    const Comp = asChild ? Slot.Root : "button"
 
-  return (
-    <Comp
-      data-slot="button"
-      data-variant={variant}
-      data-size={size}
-      // Look up the right classes for this variant/size combo, then merge
-      // in any extra className the caller passed (e.g. <Button className="w-full" />).
-      className={cn(buttonVariants({ variant, size, className }))}
-      // Spreads onClick, disabled, type, aria-*, etc. straight onto the
-      // underlying element — this is how the component stays a drop-in
-      // replacement for a plain <button>.
-      {...props}
-    />
-  )
-}
+    return (
+      <Comp
+        ref={ref}
+        data-slot="button"
+        data-variant={variant}
+        data-size={size}
+        // Look up the right classes for this variant/size combo, then merge
+        // in any extra className the caller passed (e.g. <Button className="w-full" />).
+        className={cn(buttonVariants({ variant, size, className }))}
+        // Spreads onClick, disabled, type, aria-*, etc. straight onto the
+        // underlying element — this is how the component stays a drop-in
+        // replacement for a plain <button>.
+        {...props}
+      />
+    )
+  }
+)
+Button.displayName = "Button"
 
 // Exporting both lets other files use <Button /> directly, or reuse
 // buttonVariants() to style a non-<button> element the same way.
