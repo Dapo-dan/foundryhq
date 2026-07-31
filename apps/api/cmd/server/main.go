@@ -125,11 +125,24 @@ func main() {
 	protected := router.Group("", middleware.Auth(jwtManager))
 	protected.POST("/workspaces", workspaceHandler.Create)
 	protected.GET("/workspaces", workspaceHandler.List)
-	protected.GET("/workspaces/:id", workspaceHandler.Get)
-	protected.PATCH("/workspaces/:id", workspaceHandler.Update)
-	protected.GET("/workspaces/:id/members", workspaceHandler.ListMembers)
-	protected.POST("/workspaces/:id/members/invite", workspaceHandler.Invite)
-	protected.PATCH("/workspaces/:id/members/:memberId", workspaceHandler.UpdateMemberRole)
+	protected.GET("/workspaces/:workspaceId", workspaceHandler.Get)
+	protected.PATCH("/workspaces/:workspaceId", workspaceHandler.Update)
+	protected.GET("/workspaces/:workspaceId/members", workspaceHandler.ListMembers)
+	protected.POST("/workspaces/:workspaceId/members/invite", workspaceHandler.Invite)
+	protected.PATCH("/workspaces/:workspaceId/members/:memberId", workspaceHandler.UpdateMemberRole)
+
+	projectUsecase := usecases.NewProjectUsecase(
+		postgres.NewProjectRepository(db),
+		postgres.NewWorkspaceMemberRepository(db),
+	)
+	projectHandler := handlers.NewProjectHandler(projectUsecase)
+
+	projects := protected.Group("/workspaces/:workspaceId/projects")
+	projects.POST("", projectHandler.Create)
+	projects.GET("", projectHandler.List)
+	projects.GET("/:id", projectHandler.Get)
+	projects.PATCH("/:id", projectHandler.Update)
+	projects.DELETE("/:id", projectHandler.Delete)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,

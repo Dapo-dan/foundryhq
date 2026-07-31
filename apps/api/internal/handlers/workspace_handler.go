@@ -138,7 +138,7 @@ func (h *WorkspaceHandler) Get(c *gin.Context) {
 	if !ok {
 		return
 	}
-	workspaceID, ok := parseUUIDParam(c, "id")
+	workspaceID, ok := parseUUIDParam(c, "workspaceId")
 	if !ok {
 		return
 	}
@@ -157,7 +157,7 @@ func (h *WorkspaceHandler) Update(c *gin.Context) {
 	if !ok {
 		return
 	}
-	workspaceID, ok := parseUUIDParam(c, "id")
+	workspaceID, ok := parseUUIDParam(c, "workspaceId")
 	if !ok {
 		return
 	}
@@ -186,7 +186,7 @@ func (h *WorkspaceHandler) ListMembers(c *gin.Context) {
 	if !ok {
 		return
 	}
-	workspaceID, ok := parseUUIDParam(c, "id")
+	workspaceID, ok := parseUUIDParam(c, "workspaceId")
 	if !ok {
 		return
 	}
@@ -210,7 +210,7 @@ func (h *WorkspaceHandler) Invite(c *gin.Context) {
 	if !ok {
 		return
 	}
-	workspaceID, ok := parseUUIDParam(c, "id")
+	workspaceID, ok := parseUUIDParam(c, "workspaceId")
 	if !ok {
 		return
 	}
@@ -234,7 +234,7 @@ func (h *WorkspaceHandler) UpdateMemberRole(c *gin.Context) {
 	if !ok {
 		return
 	}
-	workspaceID, ok := parseUUIDParam(c, "id")
+	workspaceID, ok := parseUUIDParam(c, "workspaceId")
 	if !ok {
 		return
 	}

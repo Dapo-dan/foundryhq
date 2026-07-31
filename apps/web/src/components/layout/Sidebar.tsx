@@ -4,6 +4,7 @@ import {
   TrendingUp,
   Building2,
   Users,
+  FolderKanban,
   SquareCheck,
   Zap,
   ChartBar,
@@ -29,6 +30,7 @@ const NAV_SECTIONS = [
   {
     title: 'Sprint',
     items: [
+      { to: '/projects', label: 'Projects', icon: FolderKanban },
       { to: '/tasks', label: 'Tasks', icon: SquareCheck },
       { to: '/sprints', label: 'Sprints', icon: Zap },
     ],

@@ -128,7 +128,7 @@ importers:
         specifier: ^1.24.0
         version: 1.27.0(react@18.3.1)
       radix-ui:
-        specifier: ^1.6.2
+        specifier: ^1.6.7
         version: 1.6.7(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: ^18.3.1
@@ -6843,7 +6843,9 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.85.3': {}
 

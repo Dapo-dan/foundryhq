@@ -52,6 +52,15 @@ Human-curated overview of FoundryHQ's REST API. This is the index — the genera
 | POST | `/workspaces/{id}/members/invite` | Invite by email |
 | PATCH | `/workspaces/{id}/members/{memberId}` | Change a member's role |
 
+### Projects
+| Method | Path | Description |
+|---|---|---|
+| GET | `/workspaces/{workspaceId}/projects` | List projects in a workspace |
+| POST | `/workspaces/{workspaceId}/projects` | Create a project |
+| GET | `/workspaces/{workspaceId}/projects/{id}` | Get one project |
+| PATCH | `/workspaces/{workspaceId}/projects/{id}` | Update name/description |
+| DELETE | `/workspaces/{workspaceId}/projects/{id}` | Soft-delete (cascades to its tasks) |
+
 ### CRM
 | Method | Path | Description |
 |---|---|---|
