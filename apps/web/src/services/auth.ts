@@ -1,5 +1,6 @@
 import { apiPost } from '@/lib/api-client'
 import type {
+  AcceptInviteInput,
   AuthSession,
   ForgotPasswordInput,
   ResetPasswordInput,
@@ -21,6 +22,12 @@ export function forgotPassword(input: ForgotPasswordInput) {
 
 export function resetPassword(input: ResetPasswordInput) {
   return apiPost<void>('/auth/reset-password', input)
+}
+
+// Unlike resetPassword, this logs the caller straight in — the emailed
+// token already proves ownership of the invited inbox.
+export function acceptInvite(input: AcceptInviteInput) {
+  return apiPost<AuthSession>('/auth/accept-invite', input)
 }
 
 // Exchanges the httpOnly refresh-token cookie (ADR-0004) for a fresh

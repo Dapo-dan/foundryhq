@@ -164,19 +164,65 @@ func (m *mockMailer) Send(_ context.Context, to, subject, body string) error {
 	return nil
 }
 
+// mockInviteTokenRepo is a hand-written in-memory domain.InviteTokenRepository.
+type mockInviteTokenRepo struct {
+	byHash map[string]*domain.InviteToken
+}
+
+func newMockInviteTokenRepo() *mockInviteTokenRepo {
+	return &mockInviteTokenRepo{byHash: map[string]*domain.InviteToken{}}
+}
+
+func (m *mockInviteTokenRepo) Create(_ context.Context, token *domain.InviteToken) error {
+	token.ID = uuid.New()
+	token.CreatedAt = time.Now()
+	cp := *token
+	m.byHash[token.TokenHash] = &cp
+	return nil
+}
+
+func (m *mockInviteTokenRepo) GetByTokenHash(_ context.Context, tokenHash string) (*domain.InviteToken, error) {
+	t, ok := m.byHash[tokenHash]
+	if !ok {
+		return nil, domain.ErrInviteTokenNotFound
+	}
+	cp := *t
+	return &cp, nil
+}
+
+func (m *mockInviteTokenRepo) MarkUsed(_ context.Context, tokenHash string) error {
+	t, ok := m.byHash[tokenHash]
+	if !ok {
+		return nil
+	}
+	now := time.Now()
+	t.UsedAt = &now
+	return nil
+}
+
 func newTestAuthUsecase() (*AuthUsecase, *mockUserRepo, *mockRefreshTokenRepo) {
 	u, users, tokens, _, _ := newTestAuthUsecaseWithExtras()
 	return u, users, tokens
 }
 
 func newTestAuthUsecaseWithExtras() (*AuthUsecase, *mockUserRepo, *mockRefreshTokenRepo, *mockPasswordResetTokenRepo, *mockMailer) {
+	u, users, tokens, resetTokens, mailer, _, _ := newTestAuthUsecaseFull()
+	return u, users, tokens, resetTokens, mailer
+}
+
+// newTestAuthUsecaseFull is the one place every AuthUsecase test dependency
+// gets constructed — other helpers above just narrow which of these they
+// return, so a new dependency only needs wiring here once.
+func newTestAuthUsecaseFull() (*AuthUsecase, *mockUserRepo, *mockRefreshTokenRepo, *mockPasswordResetTokenRepo, *mockMailer, *mockInviteTokenRepo, *mockWorkspaceMemberRepo) {
 	users := newMockUserRepo()
 	tokens := newMockRefreshTokenRepo()
 	resetTokens := newMockPasswordResetTokenRepo()
+	inviteTokens := newMockInviteTokenRepo()
+	members := newMockWorkspaceMemberRepo()
 	mailer := &mockMailer{}
 	manager := jwt.NewManager("access-secret", "refresh-secret", 15*time.Minute, 168*time.Hour)
-	u := NewAuthUsecase(users, tokens, resetTokens, manager, mailer, "http://localhost:5173")
-	return u, users, tokens, resetTokens, mailer
+	u := NewAuthUsecase(users, tokens, resetTokens, inviteTokens, members, manager, mailer, "http://localhost:5173")
+	return u, users, tokens, resetTokens, mailer, inviteTokens, members
 }
 
 func asAppError(t *testing.T, err error) *apperrors.Error {
@@ -232,6 +278,17 @@ func TestRegister_ValidationErrors(t *testing.T) {
 	}
 }
 
+func TestRegister_PasswordTooLong(t *testing.T) {
+	u, _, _ := newTestAuthUsecase()
+
+	tooLong := strings.Repeat("a", maxPasswordLength+1)
+	_, err := u.Register(context.Background(), "user@example.com", tooLong)
+	appErr := asAppError(t, err)
+	if appErr.Code != apperrors.CodeValidation {
+		t.Errorf("Code = %v, want %v", appErr.Code, apperrors.CodeValidation)
+	}
+}
+
 func TestRegister_DuplicateEmail(t *testing.T) {
 	u, _, _ := newTestAuthUsecase()
 	ctx := context.Background()
@@ -247,32 +304,117 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	}
 }
 
-func TestRegister_ClaimsPlaceholderAccount(t *testing.T) {
-	u, users, tokens := newTestAuthUsecase()
+func TestRegister_RejectsPlaceholderAccountEmail(t *testing.T) {
+	u, users, _ := newTestAuthUsecase()
 
-	// Simulate a placeholder account created by WorkspaceUsecase.Invite:
-	// email exists, no password. Registering with that email should claim
-	// it (set the password) rather than reject it as already-registered.
+	// A placeholder account created by WorkspaceUsecase.Invite: email
+	// exists, no password. Registering with that email must be rejected
+	// exactly like any other already-registered address — Register no
+	// longer lets a bare email+password call "claim" it, since that let
+	// anyone who merely knew an invited address hijack the account before
+	// its real owner ever signed up (see AuthUsecase.Register's doc
+	// comment). Only AcceptInvite, gated on the emailed token, can activate
+	// a placeholder.
 	placeholderID := uuid.New()
 	users.byID[placeholderID] = &domain.User{ID: placeholderID, Email: "invited@example.com"}
 	users.byEmail["invited@example.com"] = users.byID[placeholderID]
 
-	result, err := u.Register(context.Background(), "Invited@Example.com", "password123")
-	if err != nil {
-		t.Fatalf("Register() error = %v", err)
+	_, err := u.Register(context.Background(), "Invited@Example.com", "password123")
+	appErr := asAppError(t, err)
+	if appErr.Code != apperrors.CodeConflict {
+		t.Errorf("Code = %v, want %v", appErr.Code, apperrors.CodeConflict)
 	}
-	if result.User.ID != placeholderID {
-		t.Errorf("User.ID = %v, want the claimed placeholder's ID %v", result.User.ID, placeholderID)
+	if users.byID[placeholderID].PasswordHash != "" {
+		t.Error("the placeholder's password must not be set by a bare Register call")
 	}
-	if len(users.byEmail) != 1 {
-		t.Errorf("expected the placeholder to be claimed in place, not duplicated; got %d users", len(users.byEmail))
+}
+
+func TestAcceptInvite_Success(t *testing.T) {
+	u, users, tokens, _, _, inviteTokens, members := newTestAuthUsecaseFull()
+	ctx := context.Background()
+
+	placeholder := &domain.User{Email: "invited@example.com"}
+	if err := users.Create(ctx, placeholder); err != nil {
+		t.Fatalf("seeding placeholder user: %v", err)
 	}
-	if len(tokens.byHash) != 1 {
-		t.Errorf("expected 1 persisted refresh token, got %d", len(tokens.byHash))
+	workspaceID := uuid.New()
+	member := &domain.WorkspaceMember{WorkspaceID: workspaceID, UserID: placeholder.ID, Role: domain.RoleMember}
+	if err := members.Create(ctx, member); err != nil {
+		t.Fatalf("seeding placeholder membership: %v", err)
+	}
+	rawToken := "raw-invite-token"
+	if err := inviteTokens.Create(ctx, &domain.InviteToken{
+		WorkspaceMemberID: member.ID,
+		TokenHash:         hashToken(rawToken),
+		ExpiresAt:         time.Now().Add(time.Hour),
+	}); err != nil {
+		t.Fatalf("seeding invite token: %v", err)
 	}
 
-	if _, err := u.Login(context.Background(), "invited@example.com", "password123"); err != nil {
-		t.Errorf("Login() with the claimed password should succeed, got error = %v", err)
+	result, err := u.AcceptInvite(ctx, rawToken, "password123")
+	if err != nil {
+		t.Fatalf("AcceptInvite() error = %v", err)
+	}
+	if result.User.ID != placeholder.ID {
+		t.Errorf("User.ID = %v, want %v", result.User.ID, placeholder.ID)
+	}
+	if len(tokens.byHash) != 1 {
+		t.Errorf("expected 1 persisted refresh token (session issued), got %d", len(tokens.byHash))
+	}
+
+	if _, err := u.Login(ctx, "invited@example.com", "password123"); err != nil {
+		t.Errorf("Login() with the newly-set password should succeed, got error = %v", err)
+	}
+
+	activatedMember, err := members.GetByID(ctx, member.ID)
+	if err != nil {
+		t.Fatalf("GetByID() error = %v", err)
+	}
+	if activatedMember.JoinedAt == nil {
+		t.Error("membership should have JoinedAt set after AcceptInvite")
+	}
+
+	// The token itself should not be replayable.
+	if _, err := u.AcceptInvite(ctx, rawToken, "another-password456"); err == nil {
+		t.Error("AcceptInvite() with an already-used token should fail")
+	}
+}
+
+func TestAcceptInvite_InvalidToken(t *testing.T) {
+	u, _, _ := newTestAuthUsecase()
+
+	_, err := u.AcceptInvite(context.Background(), "not-a-real-token", "password123")
+	appErr := asAppError(t, err)
+	if appErr.Code != apperrors.CodeUnauthorized {
+		t.Errorf("Code = %v, want %v", appErr.Code, apperrors.CodeUnauthorized)
+	}
+}
+
+func TestAcceptInvite_ShortPassword(t *testing.T) {
+	u, users, _, _, _, inviteTokens, members := newTestAuthUsecaseFull()
+	ctx := context.Background()
+
+	placeholder := &domain.User{Email: "invited@example.com"}
+	if err := users.Create(ctx, placeholder); err != nil {
+		t.Fatalf("seeding placeholder user: %v", err)
+	}
+	member := &domain.WorkspaceMember{WorkspaceID: uuid.New(), UserID: placeholder.ID, Role: domain.RoleMember}
+	if err := members.Create(ctx, member); err != nil {
+		t.Fatalf("seeding placeholder membership: %v", err)
+	}
+	rawToken := "raw-invite-token"
+	if err := inviteTokens.Create(ctx, &domain.InviteToken{
+		WorkspaceMemberID: member.ID,
+		TokenHash:         hashToken(rawToken),
+		ExpiresAt:         time.Now().Add(time.Hour),
+	}); err != nil {
+		t.Fatalf("seeding invite token: %v", err)
+	}
+
+	_, err := u.AcceptInvite(ctx, rawToken, "short")
+	appErr := asAppError(t, err)
+	if appErr.Code != apperrors.CodeValidation {
+		t.Errorf("Code = %v, want %v", appErr.Code, apperrors.CodeValidation)
 	}
 }
 

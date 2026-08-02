@@ -3,6 +3,8 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -159,17 +161,30 @@ func newTestAuthHandler() *AuthHandler {
 }
 
 func newTestAuthHandlerWithMailer() (*AuthHandler, *fakeMailer) {
+	h, mailer, _, _, _ := newTestAuthHandlerFull()
+	return h, mailer
+}
+
+// newTestAuthHandlerFull is the one place every AuthHandler test dependency
+// gets constructed — other helpers above just narrow which of these they
+// return.
+func newTestAuthHandlerFull() (*AuthHandler, *fakeMailer, *fakeInviteTokenRepo, *fakeWorkspaceMemberRepo, *fakeUserRepo) {
 	manager := jwt.NewManager("access-secret", "refresh-secret", 15*time.Minute, 168*time.Hour)
 	mailer := &fakeMailer{}
+	inviteTokens := newFakeInviteTokenRepo()
+	members := newFakeWorkspaceMemberRepo()
+	users := newFakeUserRepo()
 	authUsecase := usecases.NewAuthUsecase(
-		newFakeUserRepo(),
+		users,
 		newFakeRefreshTokenRepo(),
 		newFakePasswordResetTokenRepo(),
+		inviteTokens,
+		members,
 		manager,
 		mailer,
 		"http://localhost:5173",
 	)
-	return NewAuthHandler(authUsecase, false), mailer
+	return NewAuthHandler(authUsecase, false), mailer, inviteTokens, members, users
 }
 
 func newAuthTestRouter(h *AuthHandler) *gin.Engine {
@@ -180,6 +195,7 @@ func newAuthTestRouter(h *AuthHandler) *gin.Engine {
 	router.POST("/auth/logout", h.Logout)
 	router.POST("/auth/forgot-password", h.ForgotPassword)
 	router.POST("/auth/reset-password", h.ResetPassword)
+	router.POST("/auth/accept-invite", h.AcceptInvite)
 	return router
 }
 
@@ -395,6 +411,54 @@ func TestAuthHandler_ResetPassword_Success(t *testing.T) {
 	}
 }
 
+func TestAuthHandler_AcceptInvite_Success(t *testing.T) {
+	h, _, inviteTokens, members, users := newTestAuthHandlerFull()
+	router := newAuthTestRouter(h)
+
+	placeholder := &domain.User{Email: "invited@example.com"}
+	if err := users.Create(context.Background(), placeholder); err != nil {
+		t.Fatalf("seeding placeholder user: %v", err)
+	}
+	member := &domain.WorkspaceMember{WorkspaceID: uuid.New(), UserID: placeholder.ID, Role: domain.RoleMember}
+	if err := members.Create(context.Background(), member); err != nil {
+		t.Fatalf("seeding placeholder membership: %v", err)
+	}
+	rawToken := "raw-invite-token"
+	if err := inviteTokens.Create(context.Background(), &domain.InviteToken{
+		WorkspaceMemberID: member.ID,
+		TokenHash:         sha256Hex(rawToken),
+		ExpiresAt:         time.Now().Add(time.Hour),
+	}); err != nil {
+		t.Fatalf("seeding invite token: %v", err)
+	}
+
+	w := doJSONRequest(router, http.MethodPost, "/auth/accept-invite", map[string]string{
+		"token":    rawToken,
+		"password": "password123",
+	})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	refreshCookie := findCookie(w.Result().Cookies(), refreshTokenCookieName)
+	if refreshCookie == nil {
+		t.Fatal("expected a refresh_token cookie to be set")
+	}
+}
+
+func TestAuthHandler_AcceptInvite_InvalidToken(t *testing.T) {
+	router := newAuthTestRouter(newTestAuthHandler())
+
+	w := doJSONRequest(router, http.MethodPost, "/auth/accept-invite", map[string]string{
+		"token":    "not-a-real-token",
+		"password": "password123",
+	})
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d, body = %s", w.Code, http.StatusUnauthorized, w.Body.String())
+	}
+}
+
 func TestAuthHandler_ResetPassword_InvalidToken(t *testing.T) {
 	router := newAuthTestRouter(newTestAuthHandler())
 
@@ -405,6 +469,14 @@ func TestAuthHandler_ResetPassword_InvalidToken(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d, body = %s", w.Code, http.StatusUnauthorized, w.Body.String())
 	}
+}
+
+// sha256Hex mirrors usecases.hashToken's (unexported, different package)
+// algorithm so handler tests can seed a token whose hash the real usecase
+// will recognize — usecases never persists or exposes the raw token itself.
+func sha256Hex(raw string) string {
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
 }
 
 // extractToken pulls the raw reset token out of the query string of the

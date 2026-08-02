@@ -36,3 +36,17 @@ export const resetPasswordSchema = z
   })
 
 export type ResetPasswordFormValues = Required<z.infer<typeof resetPasswordSchema>>
+
+// Same shape/rationale as resetPasswordSchema — an invite is activated with
+// a new password + confirmation, just like a reset.
+export const acceptInviteSchema = z
+  .object({
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  })
+
+export type AcceptInviteFormValues = Required<z.infer<typeof acceptInviteSchema>>

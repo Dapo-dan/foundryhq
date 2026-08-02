@@ -86,13 +86,19 @@ func main() {
 
 	jwtManager := jwt.NewManager(cfg.JWTAccessSecret, cfg.JWTRefreshSecret, cfg.JWTAccessExpiry, cfg.JWTRefreshExpiry)
 	emailSender := mailer.NewResendSender(cfg.ResendAPIKey, cfg.EmailFromAddress)
+	// Shared across AuthUsecase (AcceptInvite) and WorkspaceUsecase (Invite)
+	// — both sides of the invite-activation flow need it.
+	workspaceMemberRepo := postgres.NewWorkspaceMemberRepository(db)
+	inviteTokenRepo := postgres.NewInviteTokenRepository(db)
 	authUsecase := usecases.NewAuthUsecase(
 		postgres.NewUserRepository(db),
 		postgres.NewRefreshTokenRepository(db),
 		postgres.NewPasswordResetTokenRepository(db),
+		inviteTokenRepo,
+		workspaceMemberRepo,
 		jwtManager,
 		emailSender,
-		cfg.PasswordResetURLBase,
+		cfg.AppBaseURL,
 	)
 	// secureCookies (the refresh-token cookie's Secure flag) must be false
 	// for local HTTP dev — browsers refuse Secure cookies over plain HTTP —
@@ -100,22 +106,29 @@ func main() {
 	authHandler := handlers.NewAuthHandler(authUsecase, cfg.Env == "production")
 	// loginRateLimiter throttles brute-force credential guessing per client
 	// IP — burst requests allowed immediately, refilling gradually over the
-	// configured window rather than resetting all at once.
-	loginRateLimiter := middleware.NewRateLimiter(
+	// configured window rather than resetting all at once. Applied to every
+	// unauthenticated auth endpoint that could otherwise be hammered for
+	// enumeration, spam, bcrypt-cost exhaustion, or email-bombing via
+	// Resend — not just login.
+	authRateLimiter := middleware.NewRateLimiter(
 		rate.Every(cfg.LoginRateLimitWindow/time.Duration(cfg.LoginRateLimitBurst)),
 		cfg.LoginRateLimitBurst,
 	)
-	router.POST("/auth/register", authHandler.Register)
-	router.POST("/auth/login", loginRateLimiter.Limit(), authHandler.Login)
-	router.POST("/auth/refresh", authHandler.Refresh)
-	router.POST("/auth/logout", authHandler.Logout)
-	router.POST("/auth/forgot-password", authHandler.ForgotPassword)
-	router.POST("/auth/reset-password", authHandler.ResetPassword)
+	router.POST("/auth/register", authRateLimiter.Limit(), authHandler.Register)
+	router.POST("/auth/login", authRateLimiter.Limit(), authHandler.Login)
+	router.POST("/auth/refresh", authRateLimiter.Limit(), authHandler.Refresh)
+	router.POST("/auth/logout", authRateLimiter.Limit(), authHandler.Logout)
+	router.POST("/auth/forgot-password", authRateLimiter.Limit(), authHandler.ForgotPassword)
+	router.POST("/auth/reset-password", authRateLimiter.Limit(), authHandler.ResetPassword)
+	router.POST("/auth/accept-invite", authRateLimiter.Limit(), authHandler.AcceptInvite)
 
 	workspaceUsecase := usecases.NewWorkspaceUsecase(
 		postgres.NewWorkspaceRepository(db),
-		postgres.NewWorkspaceMemberRepository(db),
+		workspaceMemberRepo,
 		postgres.NewUserRepository(db),
+		inviteTokenRepo,
+		emailSender,
+		cfg.AppBaseURL,
 	)
 	workspaceHandler := handlers.NewWorkspaceHandler(workspaceUsecase)
 

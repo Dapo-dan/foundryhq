@@ -18,7 +18,10 @@ import (
 func newTestWorkspaceHandler() (*WorkspaceHandler, *fakeWorkspaceRepo, *fakeWorkspaceMemberRepo, *jwt.Manager) {
 	workspaces := newFakeWorkspaceRepo()
 	members := newFakeWorkspaceMemberRepo()
-	usecase := usecases.NewWorkspaceUsecase(workspaces, members, newFakeUserRepo())
+	usecase := usecases.NewWorkspaceUsecase(
+		workspaces, members, newFakeUserRepo(),
+		newFakeInviteTokenRepo(), &fakeMailer{}, "http://localhost:5173",
+	)
 	return NewWorkspaceHandler(usecase), workspaces, members, newTestJWTManager()
 }
 

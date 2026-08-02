@@ -20,6 +20,7 @@ import { SignInPage } from '@/pages/auth/sign-in'
 import { SignUpPage } from '@/pages/auth/sign-up'
 import { ForgotPasswordPage } from '@/pages/auth/forgot-password'
 import { ResetPasswordPage } from '@/pages/auth/reset-password'
+import { AcceptInvitePage } from '@/pages/auth/accept-invite'
 import { WorkspaceStepPage } from '@/pages/onboarding/workspace'
 import { TeamSizeStepPage } from '@/pages/onboarding/team-size'
 import { RoleStepPage } from '@/pages/onboarding/role'
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
           { path: 'sign-up', element: <SignUpPage /> },
           { path: 'forgot-password', element: <ForgotPasswordPage /> },
           { path: 'reset-password', element: <ResetPasswordPage /> },
+          { path: 'accept-invite', element: <AcceptInvitePage /> },
         ],
       },
       {

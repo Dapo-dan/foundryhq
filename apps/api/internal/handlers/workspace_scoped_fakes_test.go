@@ -166,6 +166,24 @@ func (r *fakeWorkspaceMemberRepo) Create(_ context.Context, member *domain.Works
 	return nil
 }
 
+func (r *fakeWorkspaceMemberRepo) GetByID(_ context.Context, id uuid.UUID) (*domain.WorkspaceMember, error) {
+	m, ok := r.byID[id]
+	if !ok {
+		return nil, domain.ErrWorkspaceMemberNotFound
+	}
+	return m, nil
+}
+
+func (r *fakeWorkspaceMemberRepo) MarkJoined(_ context.Context, id uuid.UUID) error {
+	m, ok := r.byID[id]
+	if !ok {
+		return domain.ErrWorkspaceMemberNotFound
+	}
+	now := time.Now()
+	m.JoinedAt = &now
+	return nil
+}
+
 func (r *fakeWorkspaceMemberRepo) GetByWorkspaceAndUser(_ context.Context, workspaceID, userID uuid.UUID) (*domain.WorkspaceMember, error) {
 	for _, m := range r.byID {
 		if m.WorkspaceID == workspaceID && m.UserID == userID {
@@ -339,6 +357,40 @@ func (r *fakeTaskRepo) SumStoryPointsForSprint(_ context.Context, sprintID uuid.
 		}
 	}
 	return sum, nil
+}
+
+// fakeInviteTokenRepo is a hand-written in-memory domain.InviteTokenRepository.
+type fakeInviteTokenRepo struct {
+	byHash map[string]*domain.InviteToken
+}
+
+func newFakeInviteTokenRepo() *fakeInviteTokenRepo {
+	return &fakeInviteTokenRepo{byHash: map[string]*domain.InviteToken{}}
+}
+
+func (r *fakeInviteTokenRepo) Create(_ context.Context, token *domain.InviteToken) error {
+	token.ID = uuid.New()
+	token.CreatedAt = time.Now()
+	r.byHash[token.TokenHash] = token
+	return nil
+}
+
+func (r *fakeInviteTokenRepo) GetByTokenHash(_ context.Context, tokenHash string) (*domain.InviteToken, error) {
+	t, ok := r.byHash[tokenHash]
+	if !ok {
+		return nil, domain.ErrInviteTokenNotFound
+	}
+	return t, nil
+}
+
+func (r *fakeInviteTokenRepo) MarkUsed(_ context.Context, tokenHash string) error {
+	t, ok := r.byHash[tokenHash]
+	if !ok {
+		return nil
+	}
+	now := time.Now()
+	t.UsedAt = &now
+	return nil
 }
 
 type fakeSprintRepo struct {

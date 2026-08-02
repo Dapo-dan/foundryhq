@@ -37,6 +37,25 @@ func (m *mockWorkspaceMemberRepo) Create(_ context.Context, member *domain.Works
 	return nil
 }
 
+func (m *mockWorkspaceMemberRepo) GetByID(_ context.Context, id uuid.UUID) (*domain.WorkspaceMember, error) {
+	member, ok := m.byID[id]
+	if !ok {
+		return nil, domain.ErrWorkspaceMemberNotFound
+	}
+	cp := *member
+	return &cp, nil
+}
+
+func (m *mockWorkspaceMemberRepo) MarkJoined(_ context.Context, id uuid.UUID) error {
+	member, ok := m.byID[id]
+	if !ok {
+		return domain.ErrWorkspaceMemberNotFound
+	}
+	now := time.Now()
+	member.JoinedAt = &now
+	return nil
+}
+
 func (m *mockWorkspaceMemberRepo) GetByWorkspaceAndUser(_ context.Context, workspaceID, userID uuid.UUID) (*domain.WorkspaceMember, error) {
 	for _, member := range m.byID {
 		if member.WorkspaceID == workspaceID && member.UserID == userID {
@@ -137,11 +156,18 @@ func (m *mockWorkspaceRepo) ListForUser(_ context.Context, userID uuid.UUID) ([]
 }
 
 func newTestWorkspaceUsecase() (*WorkspaceUsecase, *mockWorkspaceRepo, *mockWorkspaceMemberRepo, *mockUserRepo) {
+	u, workspaces, members, users, _, _ := newTestWorkspaceUsecaseWithMailer()
+	return u, workspaces, members, users
+}
+
+func newTestWorkspaceUsecaseWithMailer() (*WorkspaceUsecase, *mockWorkspaceRepo, *mockWorkspaceMemberRepo, *mockUserRepo, *mockMailer, *mockInviteTokenRepo) {
 	users := newMockUserRepo()
 	members := newMockWorkspaceMemberRepo()
 	workspaces := newMockWorkspaceRepo(members)
-	u := NewWorkspaceUsecase(workspaces, members, users)
-	return u, workspaces, members, users
+	inviteTokens := newMockInviteTokenRepo()
+	mailer := &mockMailer{}
+	u := NewWorkspaceUsecase(workspaces, members, users, inviteTokens, mailer, "http://localhost:5173")
+	return u, workspaces, members, users, mailer, inviteTokens
 }
 
 func TestWorkspaceCreate_Success(t *testing.T) {
@@ -337,7 +363,7 @@ func TestListMembers_ForbiddenForNonMember(t *testing.T) {
 }
 
 func TestInvite_NewEmailCreatesPlaceholderUser(t *testing.T) {
-	u, _, members, users := newTestWorkspaceUsecase()
+	u, _, members, users, mailer, inviteTokens := newTestWorkspaceUsecaseWithMailer()
 	ownerID := uuid.New()
 
 	workspace, err := u.Create(context.Background(), ownerID, "Acme Inc.")
@@ -367,10 +393,22 @@ func TestInvite_NewEmailCreatesPlaceholderUser(t *testing.T) {
 	if _, err := members.GetByWorkspaceAndUser(context.Background(), workspace.ID, placeholder.ID); err != nil {
 		t.Errorf("expected a membership row for the placeholder user, got error = %v", err)
 	}
+
+	// A new placeholder must get an emailed invite-activation token — this
+	// is the only way it can ever be claimed (see AuthUsecase.AcceptInvite).
+	if len(mailer.sent) != 1 {
+		t.Fatalf("expected 1 sent invite email, got %d", len(mailer.sent))
+	}
+	if mailer.sent[0].to != "new@example.com" {
+		t.Errorf("sent to %q, want %q", mailer.sent[0].to, "new@example.com")
+	}
+	if len(inviteTokens.byHash) != 1 {
+		t.Errorf("expected 1 persisted invite token, got %d", len(inviteTokens.byHash))
+	}
 }
 
 func TestInvite_ExistingUserBecomesMember(t *testing.T) {
-	u, _, _, users := newTestWorkspaceUsecase()
+	u, _, _, users, mailer, _ := newTestWorkspaceUsecaseWithMailer()
 	ownerID := uuid.New()
 
 	workspace, err := u.Create(context.Background(), ownerID, "Acme Inc.")
@@ -389,6 +427,11 @@ func TestInvite_ExistingUserBecomesMember(t *testing.T) {
 	}
 	if member.UserID != existing.ID {
 		t.Errorf("UserID = %v, want %v", member.UserID, existing.ID)
+	}
+	// An already-registered invitee owns their password already — no
+	// invite-activation email is needed (or sent) for them.
+	if len(mailer.sent) != 0 {
+		t.Errorf("expected no invite email for an already-registered invitee, got %d", len(mailer.sent))
 	}
 }
 

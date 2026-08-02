@@ -32,9 +32,10 @@ type WorkspaceMember struct {
 	UserID      uuid.UUID
 	Role        WorkspaceRole
 	InvitedAt   time.Time
-	// JoinedAt is nil until the invite is accepted — there's no accept-invite
-	// flow yet in v1, so it's only ever set (to the creation time) for the
-	// owner membership WorkspaceUsecase.Create makes for the creator.
+	// JoinedAt is nil until the invite is accepted — set at creation time for
+	// the owner membership WorkspaceUsecase.Create makes for the creator, and
+	// by AuthUsecase.AcceptInvite for an invited member who activates their
+	// placeholder account via the emailed invite token.
 	JoinedAt *time.Time
 }
 
@@ -49,7 +50,12 @@ type WorkspaceMemberWithUser struct {
 // WorkspaceMemberRepository persists and retrieves WorkspaceMember entities.
 type WorkspaceMemberRepository interface {
 	Create(ctx context.Context, member *WorkspaceMember) error
+	GetByID(ctx context.Context, id uuid.UUID) (*WorkspaceMember, error)
 	GetByWorkspaceAndUser(ctx context.Context, workspaceID, userID uuid.UUID) (*WorkspaceMember, error)
 	ListByWorkspaceIDWithUser(ctx context.Context, workspaceID uuid.UUID) ([]*WorkspaceMemberWithUser, error)
 	UpdateRole(ctx context.Context, id uuid.UUID, role WorkspaceRole) error
+	// MarkJoined sets JoinedAt to now for the membership row with the given
+	// id — used by AuthUsecase.AcceptInvite once an invited user activates
+	// their placeholder account.
+	MarkJoined(ctx context.Context, id uuid.UUID) error
 }

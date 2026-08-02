@@ -146,3 +146,82 @@ func TestWorkspaceMemberRepository_UpdateRole_NotFound(t *testing.T) {
 		}
 	})
 }
+
+func TestWorkspaceMemberRepository_GetByID(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		workspace := newTestProjectWorkspace(t, tx)
+		memberRepo := NewWorkspaceMemberRepository(tx)
+		ctx := context.Background()
+
+		invitee := newTestUser()
+		if err := NewUserRepository(tx).Create(ctx, invitee); err != nil {
+			t.Fatalf("creating invitee user: %v", err)
+		}
+		member := &domain.WorkspaceMember{WorkspaceID: workspace.ID, UserID: invitee.ID, Role: domain.RoleMember}
+		if err := memberRepo.Create(ctx, member); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		got, err := memberRepo.GetByID(ctx, member.ID)
+		if err != nil {
+			t.Fatalf("GetByID() error = %v", err)
+		}
+		if got.UserID != invitee.ID {
+			t.Errorf("UserID = %v, want %v", got.UserID, invitee.ID)
+		}
+	})
+}
+
+func TestWorkspaceMemberRepository_GetByID_NotFound(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		repo := NewWorkspaceMemberRepository(tx)
+
+		_, err := repo.GetByID(context.Background(), uuid.New())
+		if !errors.Is(err, domain.ErrWorkspaceMemberNotFound) {
+			t.Errorf("GetByID() error = %v, want %v", err, domain.ErrWorkspaceMemberNotFound)
+		}
+	})
+}
+
+func TestWorkspaceMemberRepository_MarkJoined(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		workspace := newTestProjectWorkspace(t, tx)
+		memberRepo := NewWorkspaceMemberRepository(tx)
+		ctx := context.Background()
+
+		invitee := newTestUser()
+		if err := NewUserRepository(tx).Create(ctx, invitee); err != nil {
+			t.Fatalf("creating invitee user: %v", err)
+		}
+		member := &domain.WorkspaceMember{WorkspaceID: workspace.ID, UserID: invitee.ID, Role: domain.RoleMember}
+		if err := memberRepo.Create(ctx, member); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+		if member.JoinedAt != nil {
+			t.Fatal("a freshly invited member should have a nil JoinedAt")
+		}
+
+		if err := memberRepo.MarkJoined(ctx, member.ID); err != nil {
+			t.Fatalf("MarkJoined() error = %v", err)
+		}
+
+		got, err := memberRepo.GetByID(ctx, member.ID)
+		if err != nil {
+			t.Fatalf("GetByID() error = %v", err)
+		}
+		if got.JoinedAt == nil {
+			t.Error("JoinedAt should be set after MarkJoined")
+		}
+	})
+}
+
+func TestWorkspaceMemberRepository_MarkJoined_NotFound(t *testing.T) {
+	withTestTx(t, func(tx *gorm.DB) {
+		repo := NewWorkspaceMemberRepository(tx)
+
+		err := repo.MarkJoined(context.Background(), uuid.New())
+		if !errors.Is(err, domain.ErrWorkspaceMemberNotFound) {
+			t.Errorf("MarkJoined() error = %v, want %v", err, domain.ErrWorkspaceMemberNotFound)
+		}
+	})
+}

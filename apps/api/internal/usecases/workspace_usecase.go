@@ -12,6 +12,7 @@ import (
 
 	"github.com/foundryhq/foundryhq/apps/api/internal/apperrors"
 	"github.com/foundryhq/foundryhq/apps/api/internal/domain"
+	"github.com/foundryhq/foundryhq/apps/api/pkg/mailer"
 )
 
 // maxSlugAttempts bounds the numeric-suffix retry generateUniqueSlug does
@@ -24,18 +25,33 @@ var slugInvalidChars = regexp.MustCompile(`[^a-z0-9]+`)
 // WorkspaceUsecase implements workspace creation, lookup, updates, and team
 // membership management.
 type WorkspaceUsecase struct {
-	workspaceRepo domain.WorkspaceRepository
-	memberRepo    domain.WorkspaceMemberRepository
-	userRepo      domain.UserRepository
+	workspaceRepo   domain.WorkspaceRepository
+	memberRepo      domain.WorkspaceMemberRepository
+	userRepo        domain.UserRepository
+	inviteTokenRepo domain.InviteTokenRepository
+	mailer          mailer.EmailSender
+	appBaseURL      string
 }
 
-// NewWorkspaceUsecase constructs a WorkspaceUsecase.
+// NewWorkspaceUsecase constructs a WorkspaceUsecase. appBaseURL is the web
+// app URL prefix used to build the emailed invite-activation link (see
+// config.AppBaseURL).
 func NewWorkspaceUsecase(
 	workspaceRepo domain.WorkspaceRepository,
 	memberRepo domain.WorkspaceMemberRepository,
 	userRepo domain.UserRepository,
+	inviteTokenRepo domain.InviteTokenRepository,
+	emailSender mailer.EmailSender,
+	appBaseURL string,
 ) *WorkspaceUsecase {
-	return &WorkspaceUsecase{workspaceRepo: workspaceRepo, memberRepo: memberRepo, userRepo: userRepo}
+	return &WorkspaceUsecase{
+		workspaceRepo:   workspaceRepo,
+		memberRepo:      memberRepo,
+		userRepo:        userRepo,
+		inviteTokenRepo: inviteTokenRepo,
+		mailer:          emailSender,
+		appBaseURL:      appBaseURL,
+	}
 }
 
 // UpdateWorkspaceInput carries the optional fields Update can change. A nil
@@ -153,9 +169,12 @@ func (u *WorkspaceUsecase) ListMembers(ctx context.Context, callerID, workspaceI
 // Invite adds email to workspaceID as a member, gated on callerID being a
 // member of it. If no user with that email exists yet, a placeholder User
 // is created — email set, no password (domain.User.PasswordHash == "") —
-// which AuthUsecase.Register later "claims" by setting a password the first
-// time that address actually signs up, rather than rejecting it as a
-// duplicate email.
+// and an invite-activation token is emailed to them; AuthUsecase.AcceptInvite
+// is the only way to set that placeholder's password and mark the
+// membership joined, since it requires the emailed token as proof of email
+// ownership (POST /auth/register rejects a placeholder's email as
+// already-registered, same as any other existing account — see
+// AuthUsecase.Register's doc comment for why).
 func (u *WorkspaceUsecase) Invite(ctx context.Context, callerID, workspaceID uuid.UUID, email string) (*domain.WorkspaceMember, error) {
 	if err := u.requireMembership(ctx, workspaceID, callerID); err != nil {
 		return nil, err
@@ -167,6 +186,7 @@ func (u *WorkspaceUsecase) Invite(ctx context.Context, callerID, workspaceID uui
 	}
 
 	target, err := u.userRepo.GetByEmail(ctx, email)
+	isNewPlaceholder := false
 	if err != nil {
 		if !errors.Is(err, domain.ErrUserNotFound) {
 			return nil, apperrors.Internal(fmt.Errorf("looking up invitee: %w", err))
@@ -175,6 +195,7 @@ func (u *WorkspaceUsecase) Invite(ctx context.Context, callerID, workspaceID uui
 		if err := u.userRepo.Create(ctx, target); err != nil {
 			return nil, apperrors.Internal(fmt.Errorf("creating placeholder user: %w", err))
 		}
+		isNewPlaceholder = true
 	} else {
 		_, err := u.memberRepo.GetByWorkspaceAndUser(ctx, workspaceID, target.ID)
 		if err == nil {
@@ -189,7 +210,45 @@ func (u *WorkspaceUsecase) Invite(ctx context.Context, callerID, workspaceID uui
 	if err := u.memberRepo.Create(ctx, member); err != nil {
 		return nil, apperrors.Internal(fmt.Errorf("creating workspace member: %w", err))
 	}
+
+	if isNewPlaceholder {
+		if err := u.sendInviteEmail(ctx, workspaceID, member, email); err != nil {
+			return nil, err
+		}
+	}
 	return member, nil
+}
+
+// sendInviteEmail generates an invite-activation token for member, persists
+// its hash, and emails the raw token as a link to email — only reached for
+// a newly-created placeholder account (see Invite).
+func (u *WorkspaceUsecase) sendInviteEmail(ctx context.Context, workspaceID uuid.UUID, member *domain.WorkspaceMember, email string) error {
+	workspace, err := u.getWorkspace(ctx, workspaceID)
+	if err != nil {
+		return err
+	}
+
+	rawToken, err := generateSecureToken()
+	if err != nil {
+		return apperrors.Internal(fmt.Errorf("generating invite token: %w", err))
+	}
+	if err := u.inviteTokenRepo.Create(ctx, &domain.InviteToken{
+		WorkspaceMemberID: member.ID,
+		TokenHash:         hashToken(rawToken),
+		ExpiresAt:         time.Now().Add(inviteTokenExpiry),
+	}); err != nil {
+		return apperrors.Internal(fmt.Errorf("persisting invite token: %w", err))
+	}
+
+	inviteLink := fmt.Sprintf("%s/auth/accept-invite?token=%s", u.appBaseURL, rawToken)
+	body := fmt.Sprintf(
+		`<p>You've been invited to join "%s" on FoundryHQ. Click the link below to set your password and get started. This link expires in %s.</p><p><a href="%s">%s</a></p>`,
+		workspace.Name, inviteTokenExpiry, inviteLink, inviteLink,
+	)
+	if err := u.mailer.Send(ctx, email, fmt.Sprintf("You've been invited to %s on FoundryHQ", workspace.Name), body); err != nil {
+		return apperrors.Internal(fmt.Errorf("sending invite email: %w", err))
+	}
+	return nil
 }
 
 // UpdateMemberRole changes memberID's role within workspaceID, gated on

@@ -49,13 +49,27 @@ type Config struct {
 	// Ops-supplied, no default — same treatment as JWTAccessSecret.
 	ResendAPIKey string
 	// EmailFromAddress is the From address on outgoing email (e.g. password
-	// reset links).
+	// reset and invite links).
 	EmailFromAddress string
-	// PasswordResetURLBase is the web app URL prefix used to build the link
-	// emailed by AuthUsecase.ForgotPassword, e.g.
-	// "{base}/auth/reset-password?token=...".
-	PasswordResetURLBase string
+	// AppBaseURL is the web app's URL prefix, used to build every link this
+	// API emails out: AuthUsecase.ForgotPassword's
+	// "{base}/auth/reset-password?token=..." and WorkspaceUsecase.Invite's
+	// "{base}/auth/accept-invite?token=...".
+	AppBaseURL string
 }
+
+// validEnvs are the only values ENV may take — anything else fails startup
+// rather than silently falling through gin's release-mode gate and the
+// refresh cookie's Secure-flag gate in cmd/server/main.go, both of which key
+// off an exact "production" string match.
+var validEnvs = map[string]bool{"development": true, "test": true, "production": true}
+
+// insecurePlaceholderSecrets are values that satisfy "non-empty" but are
+// still not safe to run with — either apps/api/.env.example's own
+// placeholder, or one of the same rough shape. Catches "copied .env.example
+// to .env and forgot to change it" specifically, not just "forgot to set it
+// at all".
+var insecurePlaceholderSecrets = map[string]bool{"change-me": true, "changeme": true}
 
 // Load reads configuration from a local .env file, falling back to real
 // environment variables (e.g. in production, where no .env file exists).
@@ -120,8 +134,27 @@ func Load() (*Config, error) {
 		}
 	}
 
+	env := v.GetString("ENV")
+	if !validEnvs[env] {
+		return nil, fmt.Errorf("ENV must be one of development/test/production, got %q", env)
+	}
+
+	// JWT_ACCESS_SECRET/JWT_REFRESH_SECRET sign every access/refresh token
+	// this API issues — an empty or known-placeholder value means anyone can
+	// forge a valid token for any user, so this fails startup loudly rather
+	// than silently serving traffic with forgeable auth (see
+	// pkg/jwt.Manager, which has no emptiness check of its own).
+	jwtAccessSecret := v.GetString("JWT_ACCESS_SECRET")
+	if err := requireRealSecret("JWT_ACCESS_SECRET", jwtAccessSecret); err != nil {
+		return nil, err
+	}
+	jwtRefreshSecret := v.GetString("JWT_REFRESH_SECRET")
+	if err := requireRealSecret("JWT_REFRESH_SECRET", jwtRefreshSecret); err != nil {
+		return nil, err
+	}
+
 	return &Config{
-		Env:  v.GetString("ENV"),
+		Env:  env,
 		Port: v.GetString("PORT"),
 
 		DBHost:     v.GetString("DB_HOST"),
@@ -131,8 +164,8 @@ func Load() (*Config, error) {
 		DBName:     v.GetString("DB_NAME"),
 		DBSSLMode:  v.GetString("DB_SSLMODE"),
 
-		JWTAccessSecret:  v.GetString("JWT_ACCESS_SECRET"),
-		JWTRefreshSecret: v.GetString("JWT_REFRESH_SECRET"),
+		JWTAccessSecret:  jwtAccessSecret,
+		JWTRefreshSecret: jwtRefreshSecret,
 		JWTAccessExpiry:  accessExpiry,
 		JWTRefreshExpiry: refreshExpiry,
 
@@ -141,8 +174,21 @@ func Load() (*Config, error) {
 		LoginRateLimitBurst:  v.GetInt("LOGIN_RATE_LIMIT_BURST"),
 		LoginRateLimitWindow: loginRateLimitWindow,
 
-		ResendAPIKey:         v.GetString("RESEND_API_KEY"),
-		EmailFromAddress:     v.GetString("EMAIL_FROM_ADDRESS"),
-		PasswordResetURLBase: v.GetString("PASSWORD_RESET_URL_BASE"),
+		ResendAPIKey:     v.GetString("RESEND_API_KEY"),
+		EmailFromAddress: v.GetString("EMAIL_FROM_ADDRESS"),
+		AppBaseURL:       v.GetString("APP_BASE_URL"),
 	}, nil
+}
+
+// requireRealSecret returns an error unless value is both non-empty and not
+// one of insecurePlaceholderSecrets — see JWT_ACCESS_SECRET/JWT_REFRESH_SECRET's
+// use above.
+func requireRealSecret(name, value string) error {
+	if value == "" {
+		return fmt.Errorf("%s is required and must not be empty", name)
+	}
+	if insecurePlaceholderSecrets[strings.ToLower(value)] {
+		return fmt.Errorf("%s is still set to a placeholder value (%q) — set a real secret before starting", name, value)
+	}
+	return nil
 }

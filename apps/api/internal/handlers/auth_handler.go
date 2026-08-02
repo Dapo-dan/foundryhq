@@ -17,9 +17,10 @@ const refreshTokenCookieName = "refresh_token"
 const refreshTokenCookiePath = "/auth"
 
 // AuthHandler serves POST /auth/register, /auth/login, /auth/refresh,
-// /auth/logout, /auth/forgot-password, and /auth/reset-password (see
-// docs/api.md). These routes must not have middleware.Auth applied —
-// they're how a caller obtains or recovers a session in the first place.
+// /auth/logout, /auth/forgot-password, /auth/reset-password, and
+// /auth/accept-invite (see docs/api.md). These routes must not have
+// middleware.Auth applied — they're how a caller obtains or recovers a
+// session in the first place.
 type AuthHandler struct {
 	authUsecase   *usecases.AuthUsecase
 	secureCookies bool
@@ -51,6 +52,13 @@ type forgotPasswordRequest struct {
 // packages/shared-types/src/auth.ts's ResetPasswordInput, which the
 // already-built reset-password screen sends against.
 type resetPasswordRequest struct {
+	Token    string `json:"token" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+// acceptInviteRequest mirrors resetPasswordRequest's shape — both activate
+// an account via an emailed token + a new password.
+type acceptInviteRequest struct {
 	Token    string `json:"token" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
@@ -183,6 +191,27 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{}})
+}
+
+// AcceptInvite handles POST /auth/accept-invite. Unlike Register, it sets
+// the refresh cookie and logs the caller straight in — the emailed token
+// already proves ownership of the invited inbox, so there's no reason to
+// make them sign in again immediately after.
+func (h *AuthHandler) AcceptInvite(c *gin.Context) {
+	var req acceptInviteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handleError(c, apperrors.Validation("", err.Error()))
+		return
+	}
+
+	result, err := h.authUsecase.AcceptInvite(c.Request.Context(), req.Token, req.Password)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	h.setRefreshCookie(c, result.RefreshToken, result.RefreshExpiresAt)
+	c.JSON(http.StatusOK, gin.H{"data": toAuthResponse(result)})
 }
 
 func (h *AuthHandler) setRefreshCookie(c *gin.Context, token string, expiresAt time.Time) {

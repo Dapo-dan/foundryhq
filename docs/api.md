@@ -40,6 +40,7 @@ Human-curated overview of FoundryHQ's REST API. This is the index — the genera
 | POST | `/auth/logout` | Invalidate the current refresh token |
 | POST | `/auth/forgot-password` | Request a password-reset email (always 200) |
 | POST | `/auth/reset-password` | Reset password with a token from that email |
+| POST | `/auth/accept-invite` | Activate a workspace invite: set a password with the emailed token, logs the caller in |
 
 ### Workspaces & Team
 | Method | Path | Description |

@@ -26,3 +26,8 @@ export interface ResetPasswordInput {
   token: string
   password: string
 }
+
+export interface AcceptInviteInput {
+  token: string
+  password: string
+}

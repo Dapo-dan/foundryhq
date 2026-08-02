@@ -25,8 +25,14 @@ FROM alpine:3.20
 # ca-certificates is needed for any outbound TLS calls (e.g. OAuth providers
 # once those ship); harmless to include now.
 RUN apk add --no-cache ca-certificates
+# Run as an unprivileged, non-login user rather than root — limits the
+# blast radius of any bug in the server binary (e.g. arbitrary file write)
+# to whatever this specific uid/gid can touch, not the whole container.
+RUN addgroup -S foundryhq && adduser -S -G foundryhq foundryhq
 WORKDIR /app
 COPY --from=builder /out/server ./server
+RUN chown foundryhq:foundryhq ./server
+USER foundryhq
 
 EXPOSE 8080
 ENTRYPOINT ["./server"]

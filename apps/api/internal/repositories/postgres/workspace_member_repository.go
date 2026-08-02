@@ -69,6 +69,19 @@ func (r *WorkspaceMemberRepository) Create(ctx context.Context, member *domain.W
 	return nil
 }
 
+// GetByID returns the membership row with the given id, or
+// domain.ErrWorkspaceMemberNotFound.
+func (r *WorkspaceMemberRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.WorkspaceMember, error) {
+	var model workspaceMemberModel
+	if err := r.db.WithContext(ctx).First(&model, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrWorkspaceMemberNotFound
+		}
+		return nil, fmt.Errorf("getting workspace member %s: %w", id, err)
+	}
+	return model.toDomain(), nil
+}
+
 // GetByWorkspaceAndUser returns the membership row for userID in
 // workspaceID, or domain.ErrWorkspaceMemberNotFound.
 func (r *WorkspaceMemberRepository) GetByWorkspaceAndUser(ctx context.Context, workspaceID, userID uuid.UUID) (*domain.WorkspaceMember, error) {
@@ -139,6 +152,22 @@ func (r *WorkspaceMemberRepository) UpdateRole(ctx context.Context, id uuid.UUID
 		Update("role", string(role))
 	if result.Error != nil {
 		return fmt.Errorf("updating workspace member %s role: %w", id, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrWorkspaceMemberNotFound
+	}
+	return nil
+}
+
+// MarkJoined sets joined_at to now for the membership row with the given id.
+// Returns domain.ErrWorkspaceMemberNotFound if no such row exists.
+func (r *WorkspaceMemberRepository) MarkJoined(ctx context.Context, id uuid.UUID) error {
+	result := r.db.WithContext(ctx).
+		Model(&workspaceMemberModel{}).
+		Where("id = ?", id).
+		Update("joined_at", time.Now())
+	if result.Error != nil {
+		return fmt.Errorf("marking workspace member %s joined: %w", id, result.Error)
 	}
 	if result.RowsAffected == 0 {
 		return domain.ErrWorkspaceMemberNotFound
