@@ -127,16 +127,33 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("parsing LOGIN_RATE_LIMIT_WINDOW: %w", err)
 	}
 
-	var corsAllowedOrigins []string
-	for _, origin := range strings.Split(v.GetString("CORS_ALLOWED_ORIGINS"), ",") {
-		if origin = strings.TrimSpace(origin); origin != "" {
-			corsAllowedOrigins = append(corsAllowedOrigins, origin)
-		}
-	}
-
 	env := v.GetString("ENV")
 	if !validEnvs[env] {
 		return nil, fmt.Errorf("ENV must be one of development/test/production, got %q", env)
+	}
+
+	// DB_SSLMODE defaults to "disable" to match the local docker-compose
+	// Postgres, but Neon (and any real production Postgres) requires TLS —
+	// failing fast here turns "forgot to set this on Render" into a loud
+	// startup error instead of a silently unencrypted connection.
+	dbSSLMode := v.GetString("DB_SSLMODE")
+	if env == "production" && dbSSLMode == "disable" {
+		return nil, fmt.Errorf("DB_SSLMODE must not be %q in production (Neon requires TLS) — set it to %q", dbSSLMode, "require")
+	}
+
+	// CORS_ALLOWED_ORIGINS defaults to the local web app's dev origin so
+	// local dev works with zero config; in production that default would
+	// silently reject every request from the real web app instead of
+	// failing loudly, so it must be set explicitly.
+	rawCORSOrigins := v.GetString("CORS_ALLOWED_ORIGINS")
+	if env == "production" && rawCORSOrigins == "http://localhost:5173" {
+		return nil, fmt.Errorf("CORS_ALLOWED_ORIGINS must be set explicitly in production")
+	}
+	var corsAllowedOrigins []string
+	for _, origin := range strings.Split(rawCORSOrigins, ",") {
+		if origin = strings.TrimSpace(origin); origin != "" {
+			corsAllowedOrigins = append(corsAllowedOrigins, origin)
+		}
 	}
 
 	// JWT_ACCESS_SECRET/JWT_REFRESH_SECRET sign every access/refresh token
@@ -153,6 +170,16 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	// RESEND_API_KEY has no default and, until now, no validation — an
+	// empty or placeholder value would boot fine and only surface at the
+	// first forgot-password/invite email, silently, in production.
+	resendAPIKey := v.GetString("RESEND_API_KEY")
+	if env == "production" {
+		if err := requireRealSecret("RESEND_API_KEY", resendAPIKey); err != nil {
+			return nil, err
+		}
+	}
+
 	return &Config{
 		Env:  env,
 		Port: v.GetString("PORT"),
@@ -162,7 +189,7 @@ func Load() (*Config, error) {
 		DBUser:     v.GetString("DB_USER"),
 		DBPassword: v.GetString("DB_PASSWORD"),
 		DBName:     v.GetString("DB_NAME"),
-		DBSSLMode:  v.GetString("DB_SSLMODE"),
+		DBSSLMode:  dbSSLMode,
 
 		JWTAccessSecret:  jwtAccessSecret,
 		JWTRefreshSecret: jwtRefreshSecret,
@@ -174,7 +201,7 @@ func Load() (*Config, error) {
 		LoginRateLimitBurst:  v.GetInt("LOGIN_RATE_LIMIT_BURST"),
 		LoginRateLimitWindow: loginRateLimitWindow,
 
-		ResendAPIKey:     v.GetString("RESEND_API_KEY"),
+		ResendAPIKey:     resendAPIKey,
 		EmailFromAddress: v.GetString("EMAIL_FROM_ADDRESS"),
 		AppBaseURL:       v.GetString("APP_BASE_URL"),
 	}, nil

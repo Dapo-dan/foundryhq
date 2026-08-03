@@ -4,9 +4,20 @@ package database
 import (
 	"fmt"
 	"net/url"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+)
+
+// Pool bounds are set conservatively for a single small Render instance
+// against a Neon endpoint, which caps concurrent connections well below
+// what Go's unbounded default would otherwise happily open under load.
+const (
+	maxOpenConns    = 15
+	maxIdleConns    = 5
+	connMaxLifetime = 30 * time.Minute
+	connMaxIdleTime = 5 * time.Minute
 )
 
 // Config describes the connection parameters needed to reach Postgres.
@@ -44,6 +55,19 @@ func Connect(cfg Config) (*gorm.DB, error) {
 		// on it, while adding context about what operation failed.
 		return nil, fmt.Errorf("connecting to database: %w", err)
 	}
+
+	// GORM shares one *sql.DB under the hood, which defaults to unlimited
+	// open connections — bounding it here keeps a connection burst (or two
+	// Render instances briefly overlapping during a deploy) from exhausting
+	// Neon's connection cap.
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("unwrapping database handle: %w", err)
+	}
+	sqlDB.SetMaxOpenConns(maxOpenConns)
+	sqlDB.SetMaxIdleConns(maxIdleConns)
+	sqlDB.SetConnMaxLifetime(connMaxLifetime)
+	sqlDB.SetConnMaxIdleTime(connMaxIdleTime)
 
 	return db, nil
 }

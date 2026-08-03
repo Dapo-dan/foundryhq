@@ -72,10 +72,20 @@ func main() {
 	// first so it wraps (and can catch panics from) every middleware after
 	// it; RequestID goes before Logger so request IDs are available to log.
 	router := gin.New()
+	// Gin's default trusts every proxy (0.0.0.0/0), which means c.ClientIP()
+	// trusts a caller-supplied X-Forwarded-For at face value — on Render,
+	// that would let a client spoof its own IP to reset its login-rate-limit
+	// bucket. Trusting only RFC1918 ranges means X-Forwarded-For is only
+	// honored from Render's own edge network, not from the client directly.
+	if err := router.SetTrustedProxies([]string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}); err != nil {
+		zapLogger.Fatal("configuring trusted proxies", zap.Error(err))
+	}
 	router.Use(
 		middleware.Recovery(zapLogger),
 		middleware.RequestID(),
 		middleware.Logger(zapLogger),
+		middleware.MaxBodySize(1<<20), // 1MB is generous for this API's JSON payloads
+		middleware.SecurityHeaders(cfg.Env == "production"),
 		middleware.CORS(cfg.CORSAllowedOrigins),
 	)
 
@@ -188,6 +198,15 @@ func main() {
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: router,
+		// Go's zero value for these is "never" — without them, a client that
+		// trickles headers/body one byte at a time (a slowloris attack, or
+		// just a bad connection) can pin a goroutine and connection open
+		// indefinitely, which matters more on Render's fixed-memory
+		// instances than it would on unbounded infra.
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	// ListenAndServe blocks, so it runs in its own goroutine; the main
